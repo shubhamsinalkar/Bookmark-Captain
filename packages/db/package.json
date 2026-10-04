@@ -1,0 +1,32 @@
+{
+  "name": "@bc/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./migrator": "./src/migrator.ts"
+  },
+  "scripts": {
+    "generate": "drizzle-kit generate",
+    "migrate": "tsx --env-file-if-exists=../../.env src/migrate.ts",
+    "studio": "drizzle-kit studio",
+    "typecheck": "tsc"
+  },
+  "peerDependencies": {
+    "drizzle-orm": "^0.45.0",
+    "pg": "^8.13.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.23.1",
+    "drizzle-kit": "^0.31.11",
+    "drizzle-orm": "^0.45.3",
+    "pg": "^8.23.0",
+    "tsx": "^4.23.15",
+    "zod": "^4.6.5"
+  },
+  "dependencies": {
+    "@bc/shared": "workspace:^"
+  }
+}

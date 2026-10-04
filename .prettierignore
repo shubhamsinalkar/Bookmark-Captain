@@ -1,0 +1,10 @@
+pnpm-lock.yaml
+**/migrations/meta/
+dist/
+.next/
+.next-*/
+.turbo/
+coverage/
+test-results/
+playwright-report/
+e2e/.extension/

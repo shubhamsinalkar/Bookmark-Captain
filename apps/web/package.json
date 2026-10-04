@@ -1,0 +1,31 @@
+{
+  "name": "@bc/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start --port 3000",
+    "typecheck": "next typegen && tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@bc/shared": "workspace:^",
+    "@tanstack/react-query": "^5.104.0",
+    "next": "^16.3.7",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "server-only": "^0.0.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@next/env": "16.3.7",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "happy-dom": "^20.14.5",
+    "tailwindcss": "^4.3.3",
+    "vitest": "^5.0.2"
+  }
+}

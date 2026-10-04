@@ -1,0 +1,23 @@
+{
+  "name": "@bc/extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx scripts/build.ts --watch",
+    "build": "tsx scripts/build.ts",
+    "typecheck": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@bc/shared": "workspace:^",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.3.4",
+    "@types/node": "^24",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.23.15",
+    "vitest": "^5.0.2"
+  }
+}

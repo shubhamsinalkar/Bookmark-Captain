@@ -1,0 +1,74 @@
+{
+  "data": {
+    "home": {
+      "home_timeline_urt": {
+        "instructions": [
+          {
+            "type": "TimelineAddEntries",
+            "entries": [
+              {
+                "entryId": "tweet-1972600000000000004",
+                "sortIndex": "1972600000000000004",
+                "content": {
+                  "entryType": "TimelineTimelineItem",
+                  "__typename": "TimelineTimelineItem",
+                  "itemContent": {
+                    "itemType": "TimelineTweet",
+                    "__typename": "TimelineTweet",
+                    "tweet_results": {
+                      "result": {
+                        "__typename": "Tweet",
+                        "rest_id": "1972600000000000004",
+                        "core": {
+                          "user_results": {
+                            "result": {
+                              "__typename": "User",
+                              "rest_id": "44",
+                              "core": { "name": "Sam Alba", "screen_name": "sam_alba" },
+                              "avatar": {
+                                "image_url": "https://pbs.twimg.com/profile_images/44/sam_normal.jpg"
+                              }
+                            }
+                          }
+                        },
+                        "legacy": {
+                          "created_at": "Wed Oct 01 08:00:00 +0000 2025",
+                          "display_text_range": [0, 44],
+                          "full_text": "Ship small &lt;changes&gt;, ship them often.",
+                          "entities": { "urls": [] }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "entryId": "promoted-tweet-1",
+                "sortIndex": "1972600000000000003",
+                "content": {
+                  "entryType": "TimelineTimelineItem",
+                  "itemContent": {
+                    "itemType": "TimelineTweet",
+                    "promotedMetadata": { "advertiser_results": {} },
+                    "tweet_results": {
+                      "result": {
+                        "__typename": "Tweet",
+                        "rest_id": "1972600000000000099",
+                        "core": {
+                          "user_results": {
+                            "result": { "core": { "name": "Ad", "screen_name": "advertiser" } }
+                          }
+                        },
+                        "legacy": { "full_text": "Buy now", "entities": { "urls": [] } }
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

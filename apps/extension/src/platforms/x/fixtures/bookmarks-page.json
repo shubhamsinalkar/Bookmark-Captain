@@ -1,0 +1,194 @@
+{
+  "data": {
+    "bookmark_timeline_v2": {
+      "timeline": {
+        "instructions": [
+          {
+            "type": "TimelineAddEntries",
+            "entries": [
+              {
+                "entryId": "tweet-1972900000000000001",
+                "sortIndex": "1972900000000000001",
+                "content": {
+                  "entryType": "TimelineTimelineItem",
+                  "__typename": "TimelineTimelineItem",
+                  "itemContent": {
+                    "itemType": "TimelineTweet",
+                    "__typename": "TimelineTweet",
+                    "tweet_results": {
+                      "result": {
+                        "__typename": "Tweet",
+                        "rest_id": "1972900000000000001",
+                        "core": {
+                          "user_results": {
+                            "result": {
+                              "__typename": "User",
+                              "rest_id": "11",
+                              "core": { "name": "charan", "screen_name": "xpcharan" },
+                              "avatar": {
+                                "image_url": "https://pbs.twimg.com/profile_images/11/charan_normal.jpg"
+                              },
+                              "legacy": {}
+                            }
+                          }
+                        },
+                        "views": { "count": "73" },
+                        "legacy": {
+                          "created_at": "Tue Sep 30 06:12:00 +0000 2025",
+                          "conversation_id_str": "1972899999999999999",
+                          "display_text_range": [11, 78],
+                          "full_text": "@HelloVyom Thanks, found the original thread &amp; it's great https://t.co/abc123 https://t.co/media1",
+                          "in_reply_to_screen_name": "HelloVyom",
+                          "entities": {
+                            "urls": [
+                              {
+                                "url": "https://t.co/abc123",
+                                "expanded_url": "https://www.threads.com/@boris_cherny/post/1",
+                                "display_url": "threads.com/@boris_cherny/…",
+                                "indices": [62, 78]
+                              }
+                            ],
+                            "media": [
+                              {
+                                "url": "https://t.co/media1",
+                                "media_url_https": "https://pbs.twimg.com/media/abc.jpg",
+                                "type": "photo"
+                              }
+                            ],
+                            "user_mentions": [{ "screen_name": "HelloVyom", "indices": [0, 10] }]
+                          },
+                          "extended_entities": {
+                            "media": [
+                              {
+                                "url": "https://t.co/media1",
+                                "media_url_https": "https://pbs.twimg.com/media/abc.jpg",
+                                "type": "photo"
+                              }
+                            ]
+                          },
+                          "favorite_count": 2,
+                          "bookmarked": true
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "entryId": "tweet-1972800000000000002",
+                "sortIndex": "1972800000000000002",
+                "content": {
+                  "entryType": "TimelineTimelineItem",
+                  "__typename": "TimelineTimelineItem",
+                  "itemContent": {
+                    "itemType": "TimelineTweet",
+                    "__typename": "TimelineTweet",
+                    "tweet_results": {
+                      "result": {
+                        "__typename": "TweetWithVisibilityResults",
+                        "tweet": {
+                          "rest_id": "1972800000000000002",
+                          "core": {
+                            "user_results": {
+                              "result": {
+                                "__typename": "User",
+                                "rest_id": "22",
+                                "legacy": {
+                                  "name": "GPS",
+                                  "screen_name": "madebygps",
+                                  "profile_image_url_https": "https://pbs.twimg.com/profile_images/22/gps_normal.jpg"
+                                }
+                              }
+                            }
+                          },
+                          "note_tweet": {
+                            "is_expandable": true,
+                            "note_tweet_results": {
+                              "result": {
+                                "text": "Completely free 6-month curriculum with labs and verification systems.\n\nLearn cloud from scratch: https://t.co/long1",
+                                "entity_set": {
+                                  "urls": [
+                                    {
+                                      "url": "https://t.co/long1",
+                                      "expanded_url": "https://learntocloud.guide",
+                                      "display_url": "learntocloud.guide"
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          },
+                          "quoted_status_result": {
+                            "result": {
+                              "__typename": "Tweet",
+                              "rest_id": "1972700000000000003",
+                              "core": {
+                                "user_results": {
+                                  "result": {
+                                    "__typename": "User",
+                                    "core": { "name": "Quoted Person", "screen_name": "quoted" }
+                                  }
+                                }
+                              },
+                              "legacy": {
+                                "created_at": "Mon Sep 22 10:00:00 +0000 2025",
+                                "full_text": "I am the quoted post",
+                                "entities": { "urls": [] }
+                              }
+                            }
+                          },
+                          "legacy": {
+                            "created_at": "Mon Sep 22 12:30:00 +0000 2025",
+                            "display_text_range": [0, 140],
+                            "full_text": "Completely free 6-month curriculum with labs and verification systems. Learn cloud from scratch… https://t.co/trunc",
+                            "entities": { "urls": [] }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "entryId": "tweet-1972750000000000009",
+                "sortIndex": "1972750000000000009",
+                "content": {
+                  "entryType": "TimelineTimelineItem",
+                  "itemContent": {
+                    "itemType": "TimelineTweet",
+                    "tweet_results": {
+                      "result": {
+                        "__typename": "TweetTombstone",
+                        "tombstone": {
+                          "text": { "text": "This Post was deleted by the Post author." }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "entryId": "cursor-top-1972900000000000002",
+                "sortIndex": "1972900000000000002",
+                "content": {
+                  "entryType": "TimelineTimelineCursor",
+                  "value": "HBaAgLydwdX-top",
+                  "cursorType": "Top"
+                }
+              },
+              {
+                "entryId": "cursor-bottom-1972700000000000000",
+                "sortIndex": "1972700000000000000",
+                "content": {
+                  "entryType": "TimelineTimelineCursor",
+                  "value": "HCaAgLydwdX-bottom",
+                  "cursorType": "Bottom"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

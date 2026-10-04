@@ -1,0 +1,11 @@
+packages:
+  - apps/*
+  - packages/*
+  - e2e
+
+# pnpm 10 blocks dependency install scripts by default; allow only the ones we need.
+onlyBuiltDependencies:
+  - esbuild
+  - '@tailwindcss/oxide'
+  - sharp
+  - unrs-resolver
