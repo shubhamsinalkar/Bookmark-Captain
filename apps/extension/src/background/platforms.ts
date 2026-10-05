@@ -670,6 +670,7 @@ export async function handleDone(
   tabId: number | undefined,
   outcome: SyncOutcome,
   listedIds?: unknown,
+  listEmpty = false,
 ): Promise<void> {
   if (tabId === undefined) return;
   // The whole list was read: anything synced before that is gone from it was unsaved.
@@ -677,7 +678,7 @@ export async function handleDone(
   if (session && session.mode !== 'learn' && outcome === 'complete' && Array.isArray(listedIds)) {
     const listed = listedIds.filter((id): id is string => typeof id === 'string');
     const known = (await readState()).knownIds[session.platform] ?? [];
-    await handleRemoved(session.platform, unlistedIds(known, listed));
+    await handleRemoved(session.platform, unlistedIds(known, listed, { listEmpty }));
   }
   await endSession(tabId, outcome);
 }

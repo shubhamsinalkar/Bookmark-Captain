@@ -27,6 +27,8 @@ const pause = () => sleep(1_200 + Math.random() * 1_300);
 export interface ListPage {
   posts: CapturedPost[];
   hasMore: boolean;
+  /** The site itself said the saved list is empty (see `readWholeList`). */
+  empty?: boolean;
 }
 
 export interface RunnerOptions {
@@ -45,6 +47,7 @@ export interface RunnerOptions {
    * Catch-ups keep reading past posts that were already synced: for lists where a new save
    * may land anywhere, not only at the top (YouTube's Watch Later). A session that reads the
    * list to its end also reports every post in it, so posts no longer listed are removed.
+   * An empty list removes everything only when a page said so (`ListPage.empty`).
    */
   readWholeList?: boolean;
 }
@@ -72,6 +75,7 @@ export function createRunner({
   let pagesLoaded = 0;
   let reachedEnd = false;
   let reachedKnown = false;
+  let saidEmpty = false;
   let stopped = false;
   let wake: (() => void) | null = null;
 
@@ -119,6 +123,7 @@ export function createRunner({
         outcome,
         found,
         ...(listedIds && { listedIds }),
+        ...(listedIds?.length === 0 && saidEmpty && { listEmpty: true }),
       }).catch(() => undefined);
       showOverlay();
       overlay?.finish(summary(outcome, found, label), {
@@ -166,6 +171,7 @@ export function createRunner({
         for (const post of fresh) seen.add(post.externalId);
         if (page.posts.some((post) => known.has(post.externalId))) reachedKnown = true;
         if (!page.hasMore) reachedEnd = true;
+        if (page.empty) saidEmpty = true;
         found += fresh.length;
         pagesLoaded += 1;
         if (fresh.length > 0) {

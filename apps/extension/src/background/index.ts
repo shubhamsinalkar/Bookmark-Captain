@@ -172,7 +172,7 @@ async function handleMessage(message: RuntimeRequest, sender: chrome.runtime.Mes
       return ok;
     case 'platform:done':
       if (OUTCOMES.has(message.outcome)) {
-        await handleDone(tabId, message.outcome, message.listedIds);
+        await handleDone(tabId, message.outcome, message.listedIds, message.listEmpty === true);
       }
       return ok;
     case 'platform:close-tab':

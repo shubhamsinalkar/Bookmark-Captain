@@ -104,7 +104,11 @@ listenToTap(YOUTUBE_TAP_TAG, ({ op, status, json, requestBody }) => {
       if (setVideoId) entries.set(setVideoId, post.externalId);
     }
     remember(page.videos.map((video) => video.post));
-    runner.listPage({ posts: page.videos.map((video) => video.post), hasMore: page.hasMore });
+    runner.listPage({
+      posts: page.videos.map((video) => video.post),
+      hasMore: page.hasMore,
+      ...(page.empty && { empty: true }),
+    });
   } else {
     remember(extractVideos(json).map((video) => video.post));
   }

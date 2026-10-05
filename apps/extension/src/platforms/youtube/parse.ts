@@ -170,6 +170,25 @@ export interface WatchLaterPage {
   videos: ListedVideo[];
   /** False once a page has no "load more" item (the end of the list). */
   hasMore: boolean;
+  /** YouTube itself said Watch later has no videos (not merely that none were read). */
+  empty: boolean;
+}
+
+/**
+ * An empty Watch later comes with its playlist header and, where the list would be, a
+ * section holding only a message ("No videos in this playlist yet"). Both are checked by
+ * shape, not by the (translated) text, and a page that doesn't match is never called empty.
+ */
+function saysEmpty(json: unknown): boolean {
+  if (findString(get(json, 'header'), 'playlistId') !== WATCH_LATER_ID) return false;
+  let messageOnly = false;
+  walk(json, (node) => {
+    const contents = list(get(node, 'itemSectionRenderer', 'contents'));
+    if (contents.length > 0 && contents.every((item) => isRecord(get(item, 'messageRenderer')))) {
+      messageOnly = true;
+    }
+  });
+  return messageOnly;
 }
 
 /** A page of the Watch later list: its first page or a continuation. */
@@ -178,7 +197,8 @@ export function parseWatchLaterPage(json: unknown): WatchLaterPage {
   walk(json, (node) => {
     if ('continuationItemRenderer' in node || 'continuationItemViewModel' in node) hasMore = true;
   });
-  return { videos: extractVideos(json), hasMore };
+  const videos = extractVideos(json);
+  return { videos, hasMore, empty: videos.length === 0 && !hasMore && saysEmpty(json) };
 }
 
 /** The browse id YouTube requests for the Watch later page ("VL" + playlist id). */

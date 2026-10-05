@@ -31,6 +31,8 @@ export type RuntimeRequest =
       found: number;
       /** Every post in the saved list, when it was read to its very end (`readWholeList`). */
       listedIds?: string[];
+      /** `listedIds` is empty because the site said the list is, not because nothing was read. */
+      listEmpty?: boolean;
     }
   | { type: 'platform:close-tab'; platform: Platform }
   // "Sync this list" on any site: from the popup…

@@ -18,6 +18,13 @@ describe('unlistedIds', () => {
     const big = Array.from({ length: 100 }, (_, i) => `id${i}`);
     expect(unlistedIds(big, big.slice(0, 70))).toHaveLength(30);
   });
+
+  it('removes everything when the site said the list is empty', () => {
+    expect(unlistedIds(['a', 'b'], [], { listEmpty: true })).toEqual(['a', 'b']);
+    // Clearing a long list at once (YouTube's "Remove watched videos") is not a misread.
+    const known = Array.from({ length: 50 }, (_, i) => `id${i}`);
+    expect(unlistedIds(known, [], { listEmpty: true })).toEqual(known);
+  });
 });
 
 const NOW = Date.UTC(2026, 9, 1, 12);

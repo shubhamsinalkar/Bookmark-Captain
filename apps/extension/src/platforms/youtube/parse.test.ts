@@ -136,7 +136,48 @@ describe('parseWatchLaterPage', () => {
       ],
     };
     expect(parseWatchLaterPage(last).hasMore).toBe(false);
-    expect(parseWatchLaterPage(null)).toEqual({ videos: [], hasMore: false });
+    expect(parseWatchLaterPage(null)).toEqual({ videos: [], hasMore: false, empty: false });
+  });
+
+  /** An empty Watch later as YouTube sends it (trimmed from a real response). */
+  const emptyPage = (
+    message: unknown = { messageRenderer: { text: { runs: [{ text: 'Leer' }] } } },
+  ) => ({
+    contents: {
+      twoColumnBrowseResultsRenderer: {
+        tabs: [
+          {
+            tabRenderer: {
+              content: {
+                sectionListRenderer: {
+                  contents: [{ itemSectionRenderer: { contents: [message] } }],
+                },
+              },
+            },
+          },
+        ],
+      },
+    },
+    header: { playlistHeaderRenderer: { playlistId: 'WL', title: { simpleText: 'Watch later' } } },
+  });
+
+  it('says the list is empty only when YouTube says so, in any language', () => {
+    expect(parseWatchLaterPage(emptyPage())).toEqual({ videos: [], hasMore: false, empty: true });
+    expect(parseWatchLaterPage(firstPage).empty).toBe(false);
+  });
+
+  it('does not take a page it cannot read for an empty list', () => {
+    // Items in a shape this parser doesn't know: no videos read, but no message either.
+    expect(parseWatchLaterPage(emptyPage({ someNewVideoViewModel: { id: 'x' } })).empty).toBe(
+      false,
+    );
+    // Another playlist's empty page.
+    const other = { ...emptyPage(), header: { playlistHeaderRenderer: { playlistId: 'PLabc' } } };
+    expect(parseWatchLaterPage(other).empty).toBe(false);
+    // A header in a shape this parser doesn't know.
+    expect(parseWatchLaterPage({ ...emptyPage(), header: { pageHeaderViewModel: {} } }).empty).toBe(
+      false,
+    );
   });
 });
 

@@ -211,7 +211,7 @@ error on `chrome://extensions` → Bookmark Captain → **Errors**, and what you
   their picture. The post and its link stay.
 - **YouTube Watch later** isn't always newest-first, so each check reads the whole list. That
   also means a video you take out of Watch later on your phone is removed from your inbox at
-  the next check. (For X, Reddit and Instagram, unsaving on your phone doesn't remove the item
+  the next check, even when that leaves Watch later empty. (For X, Reddit and Instagram, unsaving on your phone doesn't remove the item
   here; mark it **Done** or **Archive** it.)
 
 ---

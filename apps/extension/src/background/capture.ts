@@ -36,10 +36,15 @@ const MAX_UNCHECKED_REMOVALS = 20;
  * Posts sent before that are missing from a saved list read to its very end: they were
  * unsaved somewhere the extension couldn't see (another device, another tab). Removes
  * nothing when the list came back empty or would lose most of what was synced, since a
- * changed or half-loaded page is likelier than a cleared-out list.
+ * changed or half-loaded page is likelier than a cleared-out list; unless the site itself
+ * said the list is empty (`listEmpty`), which removes everything, however much that is.
  */
-export function unlistedIds(known: readonly string[], listed: readonly string[]): string[] {
-  if (listed.length === 0) return [];
+export function unlistedIds(
+  known: readonly string[],
+  listed: readonly string[],
+  { listEmpty = false }: { listEmpty?: boolean } = {},
+): string[] {
+  if (listed.length === 0) return listEmpty ? [...known] : [];
   const present = new Set(listed);
   const missing = known.filter((id) => !present.has(id));
   if (missing.length > MAX_UNCHECKED_REMOVALS && missing.length > known.length / 2) return [];
