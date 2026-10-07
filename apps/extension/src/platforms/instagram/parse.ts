@@ -147,37 +147,88 @@ export interface SavedState {
   unsaved: string[];
 }
 
-/** `/api/v1/media/<id>/info/`: whether the signed-in user has saved this post right now. */
-export function parseSavedState(json: unknown): SavedState {
+export type SaveAction = 'save' | 'unsave';
+
+/**
+ * `/api/v1/media/<id>/info/`: the post, saved or not. `action` is what the request just
+ * did, when it said so plainly: that decides, because right after an unsave Instagram's
+ * answer can still be "saved" (or leave `has_viewer_saved` out). Without it,
+ * `has_viewer_saved` does.
+ */
+export function parseSavedState(json: unknown, action: SaveAction | null = null): SavedState {
   const state: SavedState = { saved: [], unsaved: [] };
   for (const media of list(isRecord(json) ? json.items : undefined)) {
     const post = mediaToPost(media);
     if (!post || !isRecord(media)) continue;
-    if (media.has_viewer_saved === true) state.saved.push(post);
-    else if (media.has_viewer_saved === false) state.unsaved.push(post.externalId);
+    const saved = action ? action === 'save' : media.has_viewer_saved;
+    if (saved === true) state.saved.push(post);
+    else if (saved === false) state.unsaved.push(post.externalId);
   }
   return state;
 }
 
+/** A save request Instagram turned down: GraphQL `errors`, or the older API's `"fail"`. */
+export function isFailedSave(json: unknown): boolean {
+  if (!isRecord(json)) return false;
+  return (Array.isArray(json.errors) && json.errors.length > 0) || json.status === 'fail';
+}
+
 const MAX_IDS = 10;
+
+/** String ids under `media_id` keys anywhere in a mutation's variables (`input.media_id`). */
+function namedMediaIds(variables: string): string[] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(variables);
+  } catch {
+    return [];
+  }
+  const ids: string[] = [];
+  const visit = (value: unknown, depth: number) => {
+    if (depth > 10 || typeof value !== 'object' || value === null) return;
+    for (const [key, child] of Object.entries(value as Json)) {
+      // Numbers are skipped: a media id is too big for a JSON number to hold exactly.
+      const id = /^media_?id$/i.test(key) ? mediaIdOf({ id: child }) : null;
+      if (id) ids.push(id);
+      else visit(child, depth + 1);
+    }
+  };
+  visit(parsed, 0);
+  return ids;
+}
+
+/** `usePolarisSaveMediaSaveMutation` / `…UnsaveMutation`; anything else isn't plain. */
+function actionOf(name: string): SaveAction | null {
+  if (/unsave/i.test(name)) return 'unsave';
+  return /save(?:mutation)?$/i.test(name) ? 'save' : null;
+}
+
+export interface SaveRequest {
+  /** The media the request saved or unsaved. */
+  ids: string[];
+  /** What it did, when it says so plainly; null: ask Instagram (`has_viewer_saved`). */
+  action: SaveAction | null;
+}
 
 /**
  * The media a request might have saved or unsaved. `op` comes from `instagramOperation`:
- * `save:<id>` carries the id from the address; for `graphql`, only requests named after
- * saving count (`fb_api_req_friendly_name=…SaveMutation`), and the ids are read from their
- * variables.
+ * `save:<id>` / `unsave:<id>` carry the id from the address; for `graphql`, only requests
+ * named after saving count (`fb_api_req_friendly_name=usePolarisSaveMediaSaveMutation`),
+ * and the ids are read from their variables: the `media_id`, since they also carry your own
+ * account id (`actor_id`); failing that, every long number in them, and then which way it
+ * went is left to Instagram.
  */
-export function saveRequestIds(op: string, requestBody: string | undefined): string[] {
-  const fromAddress = /^save:(\d{5,25})$/.exec(op)?.[1];
-  if (fromAddress) return [fromAddress];
-  if (op !== 'graphql' || !requestBody) return [];
+export function saveRequest(op: string, requestBody: string | undefined): SaveRequest | null {
+  const [, verb, id] = /^(save|unsave):(\d{5,25})$/.exec(op) ?? [];
+  if (verb && id) return { ids: [id], action: verb === 'unsave' ? 'unsave' : 'save' };
+  if (op !== 'graphql' || !requestBody) return null;
   const fields = new URLSearchParams(requestBody);
   const name = fields.get('fb_api_req_friendly_name') ?? '';
-  if (!/save/i.test(name)) return [];
-  const ids = new Set<string>();
-  for (const [id] of (fields.get('variables') ?? '').matchAll(/\d{15,25}/g)) {
-    ids.add(id);
-    if (ids.size >= MAX_IDS) break;
-  }
-  return [...ids];
+  if (!/save/i.test(name)) return null;
+  const variables = fields.get('variables') ?? '';
+  const named = [...new Set(namedMediaIds(variables))];
+  if (named.length > 0) return { ids: named.slice(0, MAX_IDS), action: actionOf(name) };
+  const found = new Set<string>();
+  for (const [number] of variables.matchAll(/\d{15,25}/g)) found.add(number);
+  return found.size > 0 ? { ids: [...found].slice(0, MAX_IDS), action: null } : null;
 }

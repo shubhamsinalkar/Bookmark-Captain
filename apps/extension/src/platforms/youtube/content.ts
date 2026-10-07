@@ -5,7 +5,8 @@
  *  - passive: you open Watch later yourself; whatever loads is synced.
  *  - live:    you add a video to Watch later anywhere on YouTube (the clock button, the
  *             menu, or the Save dialog); it is sent straight away, and removed again if
- *             you take it out.
+ *             you take it out. A removal that names only a playlist entry this tab never
+ *             saw makes the background re-read Watch later shortly after.
  * A sync that reads Watch later to its end also removes videos that are no longer in it
  * (taken out on your phone, say).
  */
@@ -17,6 +18,7 @@ import {
   browseRequestTarget,
   extractVideos,
   isSuccessfulEdit,
+  type ListedVideo,
   parseOembed,
   parseWatchLaterEdit,
   parseWatchLaterPage,
@@ -31,10 +33,11 @@ const recent = new Map<string, CapturedPost>();
 const entries = new Map<string, string>();
 const RECENT_LIMIT = 3_000;
 
-function remember(posts: CapturedPost[]) {
-  for (const post of posts) {
+function remember(videos: ListedVideo[]) {
+  for (const { post, setVideoId } of videos) {
     recent.delete(post.externalId); // Re-insert as newest.
     recent.set(post.externalId, post);
+    if (setVideoId) entries.set(setVideoId, post.externalId);
   }
   for (const oldest of recent.keys()) {
     if (recent.size <= RECENT_LIMIT) break;
@@ -72,11 +75,11 @@ listenToTap(YOUTUBE_TAP_TAG, ({ op, status, json, requestBody }) => {
     const edit = parseWatchLaterEdit(requestBody);
     if (!edit || !isSuccessfulEdit(status, json)) return;
     void Promise.all(edit.added.map(postFor)).then((posts) => runner.saved(posts));
-    const removed = [
-      ...edit.removed,
-      ...edit.removedEntries.flatMap((entry) => entries.get(entry) ?? []),
-    ];
-    runner.unsaved(removed);
+    const fromEntries = edit.removedEntries.map((entry) => entries.get(entry));
+    runner.unsaved([...edit.removed, ...fromEntries.filter((id) => id !== undefined)]);
+    // A removal we can't name the video for (its entry was never shown in this tab): read
+    // Watch later again, which removes whatever is no longer in it.
+    if (edit.unknownRemoval || fromEntries.includes(undefined)) runner.recheck();
     return;
   }
 
@@ -100,16 +103,13 @@ listenToTap(YOUTUBE_TAP_TAG, ({ op, status, json, requestBody }) => {
     const page = parseWatchLaterPage(json);
     // A continuation always brings videos; an empty one isn't the list (or its end).
     if (continuation && page.videos.length === 0) return;
-    for (const { post, setVideoId } of page.videos) {
-      if (setVideoId) entries.set(setVideoId, post.externalId);
-    }
-    remember(page.videos.map((video) => video.post));
+    remember(page.videos);
     runner.listPage({
       posts: page.videos.map((video) => video.post),
       hasMore: page.hasMore,
       ...(page.empty && { empty: true }),
     });
   } else {
-    remember(extractVideos(json).map((video) => video.post));
+    remember(extractVideos(json));
   }
 });

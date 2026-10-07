@@ -40,7 +40,10 @@ import { flush } from './sync';
 
 const SCRIPT_ID_PREFIX = 'platform:';
 const CATCH_UP_ALARM_PREFIX = 'bc-catch-up:';
+const RECHECK_ALARM_PREFIX = 'bc-recheck:';
 const TIMEOUT_ALARM_PREFIX = 'bc-sync-timeout:';
+/** Wait after a removal a page couldn't name, so a burst of removals is one check. */
+const RECHECK_DELAY_MINUTES = 0.5;
 /** A session that reports nothing for this long is abandoned (e.g. the page never loaded). */
 const SESSION_TIMEOUT_MINUTES = 2;
 /** Skip a scheduled catch-up if the list was read this recently (e.g. you browsed it). */
@@ -48,6 +51,8 @@ const MIN_CATCH_UP_GAP_MS = 20 * 60_000;
 const KNOWN_IDS_LIMIT = 5_000;
 /** Enough to recognise "already synced" at the top of the list. */
 const SESSION_KNOWN_IDS = 1_000;
+/** More than any one page of a saved list holds. */
+const MAX_PAGE_IDS = 1_000;
 const LEARNED_CATCH_UP_MINUTES = [30, 60] as const;
 
 const ok: ActionResult = { ok: true };
@@ -257,19 +262,40 @@ export async function restorePlatforms(): Promise<void> {
   }
 }
 
-async function runCatchUp(platform: Platform) {
+/**
+ * A page saw something leave the saved list but couldn't tell what (YouTube's Remove sends
+ * only a playlist entry id): read the list again soon, however recently it was read.
+ * Re-requesting pushes the alarm back, so a burst of removals is checked once.
+ */
+export async function requestRecheck(platform: Platform): Promise<void> {
+  if (!platformState(await readState(), platform).enabled) return;
+  await chrome.alarms.create(`${RECHECK_ALARM_PREFIX}${platform}`, {
+    delayInMinutes: RECHECK_DELAY_MINUTES,
+  });
+}
+
+async function runCatchUp(platform: Platform, recheck = false) {
   const state = await readState();
   const connector = findConnector(state, platform);
   const current = platformState(state, platform);
   if (!connector || !current.enabled) return;
 
   const readRecently =
+    !recheck &&
     current.lastSyncAt !== null &&
     Date.now() - Date.parse(current.lastSyncAt) < MIN_CATCH_UP_GAP_MS;
   // Opening a tab with no browser window would pop a new window up: wait instead.
   const windows = await chrome.windows.getAll({ windowTypes: ['normal'] });
   if (!state.apiToken || readRecently || windows.length === 0) {
     await scheduleCatchUp(connector);
+    return;
+  }
+  // A sync already running may have read past the removal: check again after it.
+  const running = Object.values(await readSessions()).some(
+    (session) => session.platform === platform,
+  );
+  if (recheck && running) {
+    await requestRecheck(platform);
     return;
   }
   const started = await startSession(connector, 'catch-up', false);
@@ -280,6 +306,10 @@ async function runCatchUp(platform: Platform) {
 export function handlePlatformAlarm(name: string): boolean {
   if (name.startsWith(CATCH_UP_ALARM_PREFIX)) {
     void runCatchUp(name.slice(CATCH_UP_ALARM_PREFIX.length));
+    return true;
+  }
+  if (name.startsWith(RECHECK_ALARM_PREFIX)) {
+    void runCatchUp(name.slice(RECHECK_ALARM_PREFIX.length), true);
     return true;
   }
   if (name.startsWith(TIMEOUT_ALARM_PREFIX)) {
@@ -405,6 +435,7 @@ export async function disconnectPlatform(platform: Platform): Promise<ActionResu
   });
   await registerPlatformScripts();
   await chrome.alarms.clear(`${CATCH_UP_ALARM_PREFIX}${platform}`);
+  await chrome.alarms.clear(`${RECHECK_ALARM_PREFIX}${platform}`);
   const sessions = Object.values(await readSessions()).filter(
     (session) => session.platform === platform,
   );
@@ -614,9 +645,13 @@ export async function handleCaptured(
   platform: Platform,
   posts: unknown,
   via: CaptureVia,
+  pageIds?: unknown,
 ): Promise<void> {
   const valid = Array.isArray(posts) ? posts.filter(isCapturedPost) : [];
   if (valid.length === 0) return;
+  const order = Array.isArray(pageIds)
+    ? pageIds.slice(0, MAX_PAGE_IDS).filter((id): id is string => typeof id === 'string')
+    : undefined;
   const now = Date.now();
 
   await updateState((state) => {
@@ -628,6 +663,7 @@ export async function handleCaptured(
       via,
       fullImportDone: current.fullImportDone,
       now,
+      ...(order && { pageIds: order }),
     });
     return {
       outbox: enqueue(state.outbox, { kind: 'upsert', items }),

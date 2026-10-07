@@ -22,7 +22,8 @@ const captures: Capture[] = [];
 let onCapture: ((capture: Capture) => void) | null = null;
 
 listenToTap(SITE_TAP_TAG, ({ op, status, json }) => {
-  if (status < 200 || status >= 300) return;
+  // Requests passed on without their answer hold no posts.
+  if (status < 200 || status >= 300 || json === null) return;
   const capture = { source: op, json };
   if (captures.length < MAX_CAPTURES) captures.push(capture);
   onCapture?.(capture);

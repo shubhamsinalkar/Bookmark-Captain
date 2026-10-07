@@ -19,10 +19,11 @@ export const WEB_APP_ID = '936619743392459';
 /**
  * The requests worth looking at:
  *  - `saved-feed`: a page of your saved posts, as the web app loads it while you scroll;
- *  - `save:<media id>`: the web app's save/unsave endpoints (`/api/v1/web/save/<id>/save/`);
- *  - `graphql`: newer pages save through GraphQL mutations.
- * The content script decides from the request whether it was a save, then asks Instagram
- * whether the post is saved now, so a guess here can never add or remove the wrong post.
+ *  - `save:<media id>` / `unsave:<media id>`: the older save endpoints
+ *    (`/api/v1/web/save/<id>/save/`, `…/unsave/`);
+ *  - `graphql`: the web app saves through GraphQL mutations (`usePolarisSaveMediaSaveMutation`).
+ * The content script decides from the request whether it was a save, then looks the post up
+ * by its media id, so a guess here can never add or remove the wrong post.
  */
 export function instagramOperation(url: string): string | null {
   let parsed: URL;
@@ -34,8 +35,8 @@ export function instagramOperation(url: string): string | null {
   if (!/(^|\.)instagram\.com$/.test(parsed.hostname)) return null;
   const path = parsed.pathname;
   if (path.includes('/feed/saved/')) return 'saved-feed';
-  const saved = /\/(\d{5,25})\/(?:un)?save\/?$/.exec(path);
-  if (saved) return `save:${saved[1]}`;
+  const saved = /\/(\d{5,25})\/(un)?save\/?$/.exec(path);
+  if (saved) return `${saved[2] ? 'unsave' : 'save'}:${saved[1]}`;
   if (/^\/(api\/)?graphql/.test(path)) return 'graphql';
   return null;
 }

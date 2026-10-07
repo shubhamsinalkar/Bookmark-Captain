@@ -212,7 +212,9 @@ error on `chrome://extensions` → Bookmark Captain → **Errors**, and what you
 - **YouTube Watch later** isn't always newest-first, so each check reads the whole list. That
   also means a video you take out of Watch later on your phone is removed from your inbox at
   the next check, even when that leaves Watch later empty. (For X, Reddit and Instagram, unsaving on your phone doesn't remove the item
-  here; mark it **Done** or **Archive** it.)
+  here; mark it **Done** or **Archive** it.) Removing a video with Watch later's own **⋯ →
+  Remove** sometimes doesn't say which video it was; the extension then re-reads Watch later
+  in a background tab, so the video leaves your inbox within about a minute instead of seconds.
 
 ---
 

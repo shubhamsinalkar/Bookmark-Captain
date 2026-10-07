@@ -190,6 +190,34 @@ describe('extractVideos', () => {
     ];
     expect(extractVideos(feed).map((video) => video.post.title)).toEqual(['Home feed video']);
   });
+
+  it('reads the playlist panel beside a video playing from Watch later, with its entry', () => {
+    const watchPage = {
+      playlist: {
+        playlist: {
+          playlistId: 'WL',
+          contents: [
+            {
+              playlistPanelVideoRenderer: {
+                videoId: 'aB3dE5gH7jK',
+                playlistSetVideoId: 'set-aB3dE5gH7jK',
+                title: { simpleText: 'Postgres indexes, explained' },
+              },
+            },
+          ],
+        },
+      },
+    };
+    expect(extractVideos(watchPage)).toEqual([
+      {
+        post: expect.objectContaining({
+          externalId: 'aB3dE5gH7jK',
+          title: 'Postgres indexes, explained',
+        }) as unknown,
+        setVideoId: 'set-aB3dE5gH7jK',
+      },
+    ]);
+  });
 });
 
 describe('parseWatchLaterEdit', () => {
@@ -203,7 +231,7 @@ describe('parseWatchLaterEdit', () => {
           actions: [{ addedVideoId: 'nRLZqaNOrwQ', action: 'ACTION_ADD_VIDEO' }],
         }),
       ),
-    ).toEqual({ added: ['nRLZqaNOrwQ'], removed: [], removedEntries: [] });
+    ).toEqual({ added: ['nRLZqaNOrwQ'], removed: [], removedEntries: [], unknownRemoval: false });
     expect(
       parseWatchLaterEdit(
         body({
@@ -214,7 +242,40 @@ describe('parseWatchLaterEdit', () => {
           ],
         }),
       ),
-    ).toEqual({ added: [], removed: ['nRLZqaNOrwQ'], removedEntries: ['set-aB3dE5gH7jK'] });
+    ).toEqual({
+      added: [],
+      removed: ['nRLZqaNOrwQ'],
+      removedEntries: ['set-aB3dE5gH7jK'],
+      unknownRemoval: false,
+    });
+  });
+
+  it('reads a removal from the playlist panel beside a playing video', () => {
+    // Trimmed from a real request: the entry id is all it says about the video.
+    const request = {
+      context: { client: { hl: 'en', gl: 'IN', clientName: 'WEB' } },
+      actions: [{ setVideoId: '2AF2900690419B9D', action: 'ACTION_REMOVE_VIDEO' }],
+      params: 'CAE%3D',
+      playlistId: 'WL',
+    };
+    expect(parseWatchLaterEdit(body(request))?.removedEntries).toEqual(['2AF2900690419B9D']);
+  });
+
+  it('flags removals it cannot read, but not other edits', () => {
+    expect(
+      parseWatchLaterEdit(
+        body({ playlistId: 'WL', actions: [{ action: 'ACTION_REMOVE_SOMETHING_NEW' }] }),
+      ),
+    ).toEqual({ added: [], removed: [], removedEntries: [], unknownRemoval: true });
+    // "Move to top" reorders Watch later; nothing left it.
+    expect(
+      parseWatchLaterEdit(
+        body({
+          playlistId: 'WL',
+          actions: [{ action: 'ACTION_MOVE_VIDEO_BEFORE', setVideoId: 'set-aB3dE5gH7jK' }],
+        }),
+      ),
+    ).toBeNull();
   });
 
   it('ignores other playlists and anything unreadable', () => {

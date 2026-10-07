@@ -130,7 +130,7 @@ function lockupVideo(lockup: unknown): ListedVideo | null {
     const badge = text(get(node, 'thumbnailBadgeViewModel', 'text'));
     if (!duration && badge && DURATION.test(badge)) duration = badge;
   });
-  const setVideoId = findString(lockup, 'setVideoId');
+  const setVideoId = findString(lockup, 'setVideoId') ?? findString(lockup, 'playlistSetVideoId');
   return {
     post: videoPost(id, { title: textOf(get(meta, 'title')), channel, duration }),
     ...(setVideoId && { setVideoId }),
@@ -141,7 +141,8 @@ function rendererVideo(renderer: unknown): ListedVideo | null {
   if (!isRecord(renderer) || renderer.isPlayable === false) return null; // Deleted/private.
   const id = text(renderer.videoId);
   if (!id || !VIDEO_ID.test(id)) return null;
-  const setVideoId = text(renderer.setVideoId);
+  // The playlist panel beside a video playing from Watch later names it `playlistSetVideoId`.
+  const setVideoId = text(renderer.setVideoId) ?? text(renderer.playlistSetVideoId);
   return {
     post: videoPost(id, {
       title: textOf(renderer.title),
@@ -160,7 +161,8 @@ export function extractVideos(json: unknown): ListedVideo[] {
       lockupVideo(node.lockupViewModel) ??
       rendererVideo(node.playlistVideoRenderer) ??
       rendererVideo(node.videoRenderer) ??
-      rendererVideo(node.compactVideoRenderer);
+      rendererVideo(node.compactVideoRenderer) ??
+      rendererVideo(node.playlistPanelVideoRenderer);
     if (video && !videos.has(video.post.externalId)) videos.set(video.post.externalId, video);
   });
   return [...videos.values()];
@@ -231,6 +233,8 @@ export interface WatchLaterEdit {
   removed: string[];
   /** Removals by playlist entry (Watch later's own Remove button). */
   removedEntries: string[];
+  /** A removal in a shape this parser doesn't know: which videos left can't be told. */
+  unknownRemoval: boolean;
 }
 
 /**
@@ -246,7 +250,12 @@ export function parseWatchLaterEdit(requestBody: string | undefined): WatchLater
     return null;
   }
   if (!isRecord(body) || body.playlistId !== WATCH_LATER_ID) return null;
-  const edit: WatchLaterEdit = { added: [], removed: [], removedEntries: [] };
+  const edit: WatchLaterEdit = {
+    added: [],
+    removed: [],
+    removedEntries: [],
+    unknownRemoval: false,
+  };
   for (const action of list(body.actions)) {
     if (!isRecord(action)) continue;
     const added = text(action.addedVideoId);
@@ -262,9 +271,12 @@ export function parseWatchLaterEdit(requestBody: string | undefined): WatchLater
       edit.removed.push(removed);
     } else if (action.action === 'ACTION_REMOVE_VIDEO' && entry) {
       edit.removedEntries.push(entry);
+    } else if (typeof action.action === 'string' && action.action.includes('REMOVE')) {
+      edit.unknownRemoval = true;
     }
   }
-  return edit.added.length + edit.removed.length + edit.removedEntries.length > 0 ? edit : null;
+  const changes = edit.added.length + edit.removed.length + edit.removedEntries.length;
+  return changes > 0 || edit.unknownRemoval ? edit : null;
 }
 
 /** InnerTube answers a failed edit with a 200 and another status. */

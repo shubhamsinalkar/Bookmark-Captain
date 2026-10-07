@@ -16,6 +16,7 @@ import {
   handleTabRemoved,
   learnSite,
   rejectSite,
+  requestRecheck,
   restorePlatforms,
   sessionFor,
   siteHello,
@@ -162,10 +163,14 @@ async function handleMessage(message: RuntimeRequest, sender: chrome.runtime.Mes
         message.platform,
         message.posts,
         message.via === 'live' || message.via === 'passive' ? message.via : 'sync',
+        message.pageIds,
       );
       return ok;
     case 'platform:removed':
       await handleRemoved(message.platform, message.externalIds);
+      return ok;
+    case 'platform:recheck':
+      await requestRecheck(message.platform);
       return ok;
     case 'platform:progress':
       await handleProgress(tabId);

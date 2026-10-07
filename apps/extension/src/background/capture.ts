@@ -58,6 +58,11 @@ export interface CaptureContext {
   /** Whether a full import of the saved list has finished at least once. */
   fullImportDone: boolean;
   now: number;
+  /**
+   * Every post on the page the posts were read from, in list order, when `posts` holds only
+   * some of them (a tab reading a page again sends just the posts it hadn't seen).
+   */
+  pageIds?: readonly string[];
 }
 
 /**
@@ -65,25 +70,34 @@ export interface CaptureContext {
  * `savedAt` is inferred:
  *  - already sent before: omitted (the server keeps the original date anyway);
  *  - a live Save click: now;
+ *  - listed above a post that was already sent: now. Saved lists put the newest saves
+ *    first, so it was saved after that post, i.e. since the list was last read;
  *  - read from the list after a full import has finished: now, because anything not seen
  *    before at the top of the list was saved since the last check;
- *  - read from the list before that (the first import): the post's own publish date, the
- *    best available stand-in for "saved a while ago".
+ *  - read from the list before that (the first import, or older saves an interrupted
+ *    import never reached): the post's own publish date, the best available stand-in for
+ *    "saved a while ago".
  * New items in one batch are spaced 1 ms apart, so the inbox keeps the list's order.
  */
 export function capturedToItems(
   platform: Platform,
   posts: CapturedPost[],
-  { known, via, fullImportDone, now }: CaptureContext,
+  { known, via, fullImportDone, now, pageIds }: CaptureContext,
 ): { items: IngestItem[]; newIds: string[] } {
   const datedByPost = via !== 'live' && !fullImportDone;
+  const order = pageIds ?? posts.map((post) => post.externalId);
+  const firstKnown = order.findIndex((id) => known.has(id));
+  const savedSinceLastRead = new Set(firstKnown > 0 ? order.slice(0, firstKnown) : []);
   const newIds: string[] = [];
   const items = posts.map((post, index): IngestItem => {
     const { postedAt, ...fields } = post;
     if (known.has(post.externalId)) return { platform, ...fields };
     newIds.push(post.externalId);
     const savedAt =
-      datedByPost && postedAt && Number.isFinite(Date.parse(postedAt))
+      datedByPost &&
+      !savedSinceLastRead.has(post.externalId) &&
+      postedAt &&
+      Number.isFinite(Date.parse(postedAt))
         ? postedAt
         : new Date(now - index).toISOString();
     return { platform, ...fields, savedAt };

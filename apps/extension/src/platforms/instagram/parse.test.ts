@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  isFailedSave,
   isLoginRequired,
   mediaIdOf,
   mediaToPost,
   parseSavedFeed,
   parseSavedState,
-  saveRequestIds,
+  saveRequest,
 } from './parse';
 
 const photo = {
@@ -136,28 +137,87 @@ describe('parseSavedState', () => {
     expect(state.saved.map((post) => post.externalId)).toEqual(['DAbC12xYz_9']);
     expect(state.unsaved).toEqual(['DReel000002']);
   });
+
+  it('goes by what the request did, when it said so', () => {
+    // Right after an unsave, Instagram may still say saved, or leave the field out.
+    const stale = { ...photo, has_viewer_saved: true };
+    const { has_viewer_saved: _omitted, ...unknown } = photo;
+    expect(parseSavedState({ items: [stale] }, 'unsave').unsaved).toEqual(['DAbC12xYz_9']);
+    expect(parseSavedState({ items: [unknown] }, 'unsave').unsaved).toEqual(['DAbC12xYz_9']);
+    expect(parseSavedState({ items: [unknown] }).unsaved).toEqual([]);
+    expect(parseSavedState({ items: [reel] }, 'save').saved).toHaveLength(1);
+  });
 });
 
-describe('saveRequestIds', () => {
-  it('reads the media id of the save endpoints', () => {
-    expect(saveRequestIds('save:3456789012345678901', undefined)).toEqual(['3456789012345678901']);
+/** A GraphQL request as the web app sends it (2026), with made-up ids. */
+const mutation = (name: string, variables: unknown) =>
+  new URLSearchParams({
+    fb_api_req_friendly_name: name,
+    variables: JSON.stringify(variables),
+    doc_id: '27365486596441074',
+  }).toString();
+
+const input = {
+  input: {
+    actor_id: '17841400000000001',
+    client_mutation_id: '2',
+    container_module: 'feed_timeline',
+    media_id: '4002700000000000001',
+    nav_chain: 'PolarisFeedRoot:feedPage:1:via_cold_start',
+  },
+};
+
+describe('saveRequest', () => {
+  it('reads the media id and direction of the older save endpoints', () => {
+    expect(saveRequest('save:3456789012345678901', undefined)).toEqual({
+      ids: ['3456789012345678901'],
+      action: 'save',
+    });
+    expect(saveRequest('unsave:3456789012345678901', undefined)).toEqual({
+      ids: ['3456789012345678901'],
+      action: 'unsave',
+    });
   });
 
-  it('reads GraphQL mutations named after saving', () => {
-    const body = new URLSearchParams({
-      fb_api_req_friendly_name: 'usePolarisSaveMediaSaveMutation',
-      variables: JSON.stringify({ media_id: '3456789012345678901', container_module: 'feed' }),
-      doc_id: '123',
-    }).toString();
-    expect(saveRequestIds('graphql', body)).toEqual(['3456789012345678901']);
+  it('reads only the media id of a save mutation, not your own account id', () => {
+    expect(saveRequest('graphql', mutation('usePolarisSaveMediaSaveMutation', input))).toEqual({
+      ids: ['4002700000000000001'],
+      action: 'save',
+    });
+    expect(saveRequest('graphql', mutation('usePolarisSaveMediaUnsaveMutation', input))).toEqual({
+      ids: ['4002700000000000001'],
+      action: 'unsave',
+    });
+  });
+
+  it('leaves the direction to Instagram when the request does not say it plainly', () => {
+    expect(
+      saveRequest('graphql', mutation('usePolarisSaveMediaToCollectionMutation', input))?.action,
+    ).toBeNull();
+    // No named media id: every long number, and Instagram decides.
+    expect(
+      saveRequest(
+        'graphql',
+        mutation('usePolarisSaveMediaSaveMutation', { id: '4002700000000000001' }),
+      ),
+    ).toEqual({ ids: ['4002700000000000001'], action: null });
   });
 
   it('ignores other GraphQL requests', () => {
-    const body = new URLSearchParams({
-      fb_api_req_friendly_name: 'PolarisPostRootQuery',
-      variables: JSON.stringify({ media_id: '3456789012345678901' }),
-    }).toString();
-    expect(saveRequestIds('graphql', body)).toEqual([]);
-    expect(saveRequestIds('saved-feed', body)).toEqual([]);
+    const body = mutation('PolarisPostRootQuery', { media_id: '3456789012345678901' });
+    expect(saveRequest('graphql', body)).toBeNull();
+    expect(saveRequest('saved-feed', body)).toBeNull();
+  });
+});
+
+describe('isFailedSave', () => {
+  it('recognises a save Instagram turned down', () => {
+    expect(isFailedSave({ errors: [{ message: 'Please wait a few minutes' }] })).toBe(true);
+    expect(isFailedSave({ status: 'fail' })).toBe(true);
+    // The answer to the save request this connector was fixed against.
+    expect(
+      isFailedSave({ data: { xig_media_save: { media: { id: '4002700000000000001_1' } } } }),
+    ).toBe(false);
+    expect(isFailedSave(null)).toBe(false);
   });
 });

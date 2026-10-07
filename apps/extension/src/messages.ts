@@ -21,8 +21,16 @@ export type RuntimeRequest =
   | { type: 'platform:sync'; platform: Platform; mode: SyncMode }
   // From a platform's content script (e.g. on x.com).
   | { type: 'platform:session'; platform: Platform }
-  | { type: 'platform:captured'; platform: Platform; posts: CapturedPost[]; via: CaptureVia }
+  | {
+      type: 'platform:captured';
+      platform: Platform;
+      posts: CapturedPost[];
+      via: CaptureVia;
+      /** Every post on the page, in list order, when `posts` holds only the unseen ones. */
+      pageIds?: string[];
+    }
   | { type: 'platform:removed'; platform: Platform; externalIds: string[] }
+  | { type: 'platform:recheck'; platform: Platform }
   | { type: 'platform:progress'; platform: Platform; found: number }
   | {
       type: 'platform:done';
@@ -47,6 +55,7 @@ export const PLATFORM_PAGE_REQUESTS = new Set<RuntimeRequest['type']>([
   'platform:session',
   'platform:captured',
   'platform:removed',
+  'platform:recheck',
   'platform:progress',
   'platform:done',
   'platform:close-tab',

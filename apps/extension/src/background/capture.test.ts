@@ -76,6 +76,40 @@ describe('capturedToItems', () => {
     expect(items[0]!.savedAt).toBe(new Date(NOW).toISOString());
   });
 
+  it('dates a post listed above one sent before as saved now, even before the import finished', () => {
+    // A check or a look at the saved page finds a new save on top of posts already synced.
+    const { items } = capturedToItems(
+      'x',
+      [post('new'), post('1'), post('2')],
+      context({ known: new Set(['1', '2']) }),
+    );
+    expect(items[0]!.savedAt).toBe(new Date(NOW).toISOString());
+  });
+
+  it('keeps the publish date for unseen posts listed below ones sent before', () => {
+    // An import that stopped early, read again: older saves it never reached.
+    const { items } = capturedToItems(
+      'x',
+      [post('1'), post('old'), post('2'), post('older')],
+      context({ known: new Set(['1', '2']) }),
+    );
+    expect(items.map((item) => item.savedAt)).toEqual([
+      undefined,
+      '2025-01-01T00:00:00.000Z',
+      undefined,
+      '2025-01-01T00:00:00.000Z',
+    ]);
+  });
+
+  it('places posts by the whole page when only the unseen ones are sent', () => {
+    const { items } = capturedToItems(
+      'x',
+      [post('new')],
+      context({ known: new Set(['1']), pageIds: ['new', '1'] }),
+    );
+    expect(items[0]!.savedAt).toBe(new Date(NOW).toISOString());
+  });
+
   it('leaves the date of already-sent posts alone', () => {
     const { items, newIds } = capturedToItems(
       'x',

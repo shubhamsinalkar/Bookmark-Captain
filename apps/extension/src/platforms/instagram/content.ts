@@ -4,15 +4,22 @@
  *  - sync:    the background opened Instagram; the saved list is read page by page from
  *             Instagram's own API (`/api/v1/feed/saved/posts/`), no scrolling needed.
  *  - passive: you scroll your own saved page; whatever it loads is synced.
- *  - live:    you click Save (or remove it) on any post; the extension asks Instagram
- *             whether it is now saved and sends it straight away (or removes it).
+ *  - live:    you click Save (or remove it) on any post; the extension looks the post up
+ *             and sends it straight away (or removes it).
  */
 import { sendToBackground } from '../../messages';
 import { createRunner } from '../runner';
 import { listenToTap } from '../tap';
 import type { SessionInfo } from '../types';
 import { INSTAGRAM_TAP_TAG, SAVED_PATH, WEB_APP_ID } from './constants';
-import { isLoginRequired, parseSavedFeed, parseSavedState, saveRequestIds } from './parse';
+import {
+  isFailedSave,
+  isLoginRequired,
+  parseSavedFeed,
+  parseSavedState,
+  saveRequest,
+  type SaveRequest,
+} from './parse';
 
 /** Gives Instagram a moment to record a save before asking whether it happened. */
 const LIVE_CHECK_DELAY_MS = 800;
@@ -81,11 +88,14 @@ const runner = createRunner({
     })),
 });
 
-/** A save request went through: ask Instagram what is saved now, and pass that on. */
-async function checkSaved(ids: string[]) {
+/** A save request went through: look the posts up (media id → post), and pass them on. */
+async function checkSaved({ ids, action }: SaveRequest) {
   await sleep(LIVE_CHECK_DELAY_MS);
   for (const id of ids) {
-    const { saved, unsaved } = parseSavedState(await getJson(`/api/v1/media/${id}/info/`));
+    // An id that isn't a post (Instagram answers with an error) mustn't stop the others.
+    const json = await getJson(`/api/v1/media/${id}/info/`).catch(() => null);
+    if (json === null) continue;
+    const { saved, unsaved } = parseSavedState(json, action);
     runner.saved(saved);
     runner.unsaved(unsaved);
   }
@@ -103,6 +113,6 @@ listenToTap(INSTAGRAM_TAP_TAG, ({ op, status, requestBody, json }) => {
     });
     return;
   }
-  const ids = saveRequestIds(op, requestBody);
-  if (ids.length > 0) void checkSaved(ids).catch(() => undefined);
+  const request = saveRequest(op, requestBody);
+  if (request && !isFailedSave(json)) void checkSaved(request).catch(() => undefined);
 });

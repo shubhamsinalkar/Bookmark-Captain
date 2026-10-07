@@ -59,6 +59,8 @@ export interface PlatformRunner {
   saved(posts: CapturedPost[]): void;
   /** The user just unsaved these posts. */
   unsaved(externalIds: string[]): void;
+  /** The user just unsaved posts that can't be named: read the saved list again soon. */
+  recheck(): void;
 }
 
 export function createRunner({
@@ -180,6 +182,10 @@ export function createRunner({
             platform,
             posts: fresh,
             via: info.mode === 'passive' ? 'passive' : 'sync',
+            // Where the unseen posts sit among the rest tells new saves from old ones.
+            ...(fresh.length < page.posts.length && {
+              pageIds: page.posts.map((post) => post.externalId),
+            }),
           }).catch(() => undefined);
         }
         wake?.();
@@ -196,6 +202,9 @@ export function createRunner({
       void sendToBackground({ type: 'platform:removed', platform, externalIds }).catch(
         () => undefined,
       );
+    },
+    recheck() {
+      void sendToBackground({ type: 'platform:recheck', platform }).catch(() => undefined);
     },
   };
 }

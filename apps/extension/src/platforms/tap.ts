@@ -79,6 +79,21 @@ export function installNetworkTap(
     if (mode === 'on') deliver(message);
     else if (mode === 'buffer' && buffer.length < MAX_BUFFERED) buffer.push(message);
   };
+  /**
+   * A request with a body (a mutation) whose answer isn't labelled JSON: some sites label
+   * their JSON otherwise (Instagram's GraphQL: text/html). Passed on with the answer if it
+   * is JSON after all, and without it (null) if not: the request still says what happened.
+   */
+  const emitUnlabelled = (op: string, status: number, requestBody: unknown, text: string) => {
+    if (bodyText(requestBody) === undefined) return;
+    let json: unknown = null;
+    try {
+      if (text.length <= MAX_JSON_CHARS) json = parseJson(text);
+    } catch {
+      // Not JSON: the request alone.
+    }
+    emit(op, status, requestBody, json);
+  };
   const emitText = (op: string, status: number, requestBody: unknown, text: string) => {
     if (text.length > MAX_JSON_CHARS) return;
     // A mutation may answer with an empty body: its request is what matters.
@@ -119,12 +134,14 @@ export function installNetworkTap(
   window.fetch = async function (...args: Parameters<typeof fetch>): Promise<Response> {
     let op: string | null = null;
     let requestBody: Promise<unknown> = Promise.resolve(undefined);
+    let hasBody = false;
     try {
       const [input, init] = args;
       const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
       op = mode === 'off' ? null : operationOf(url);
-      if (op && init?.body !== undefined) {
+      if (op && init?.body !== undefined && init.body !== null) {
         requestBody = Promise.resolve(init.body);
+        hasBody = true;
       } else if (
         op &&
         input instanceof Request &&
@@ -137,6 +154,7 @@ export function installNetworkTap(
           .clone()
           .text()
           .catch(() => undefined);
+        hasBody = true;
       }
     } catch {
       // Never break the page.
@@ -145,10 +163,15 @@ export function installNetworkTap(
     const response = await nativeFetch.apply(window, args);
     if (!op || mode === 'off') return response;
     try {
-      if (!NOT_JSON.test(response.headers.get('content-type') ?? '')) {
-        const operation = op;
+      const operation = op;
+      const labelledJson = !NOT_JSON.test(response.headers.get('content-type') ?? '');
+      if (labelledJson || hasBody) {
         void Promise.all([response.clone().text(), requestBody])
-          .then(([text, body]) => emitText(operation, response.status, body, text))
+          .then(([text, body]) =>
+            labelledJson
+              ? emitText(operation, response.status, body, text)
+              : emitUnlabelled(operation, response.status, body, text),
+          )
           .catch(() => undefined);
       }
     } catch {
@@ -170,7 +193,12 @@ export function installNetworkTap(
     if (op) {
       this.addEventListener('load', () => {
         try {
-          if (NOT_JSON.test(this.getResponseHeader('content-type') ?? '')) return;
+          if (NOT_JSON.test(this.getResponseHeader('content-type') ?? '')) {
+            const text =
+              this.responseType === '' || this.responseType === 'text' ? this.responseText : '';
+            emitUnlabelled(op, this.status, body, text);
+            return;
+          }
           if (this.responseType === 'json') emit(op, this.status, body, this.response);
           else if (this.responseType === '' || this.responseType === 'text') {
             emitText(op, this.status, body, this.responseText);
