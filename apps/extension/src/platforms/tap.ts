@@ -25,7 +25,8 @@ export interface TapMessage {
   json: unknown;
 }
 
-const MAX_REQUEST_BODY = 10_000;
+/** Roomy: YouTube's requests carry a large `context` (client, experiments, ad signals). */
+const MAX_REQUEST_BODY = 100_000;
 const MAX_JSON_CHARS = 5_000_000;
 /** Responses held back while a gated tap waits to hear whether it is wanted. */
 const MAX_BUFFERED = 60;
@@ -46,6 +47,35 @@ function bodyText(body: unknown): string | undefined {
     return fields.toString();
   }
   return undefined;
+}
+
+/** gzip's or zlib's first bytes: a body compressed before sending. */
+function compressionOf(bytes: Uint8Array): CompressionFormat | null {
+  if (bytes[0] === 0x1f && bytes[1] === 0x8b) return 'gzip';
+  if (bytes[0] === 0x78 && [0x01, 0x5e, 0x9c, 0xda].includes(bytes[1] ?? -1)) return 'deflate';
+  return null;
+}
+
+/**
+ * Any request body as text, including bytes: YouTube gzips its requests before sending them
+ * (`wug_networking_gzip_request`), so those are decompressed first.
+ */
+async function readBody(body: unknown): Promise<string | undefined> {
+  const text = bodyText(body);
+  if (text !== undefined) return text;
+  let bytes: Uint8Array<ArrayBuffer>;
+  if (body instanceof Blob) bytes = new Uint8Array(await body.arrayBuffer());
+  else if (body instanceof ArrayBuffer) bytes = new Uint8Array(body.slice(0));
+  else if (ArrayBuffer.isView(body)) {
+    bytes = new Uint8Array(body.byteLength);
+    bytes.set(new Uint8Array(body.buffer, body.byteOffset, body.byteLength));
+  } else return undefined;
+  if (bytes.byteLength > MAX_REQUEST_BODY) return undefined;
+  const format = compressionOf(bytes);
+  if (!format) return new TextDecoder().decode(bytes);
+  return new Response(
+    new Blob([bytes]).stream().pipeThrough(new DecompressionStream(format)),
+  ).text();
 }
 
 export interface TapOptions {
@@ -140,7 +170,14 @@ export function installNetworkTap(
       const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
       op = mode === 'off' ? null : operationOf(url);
       if (op && init?.body !== undefined && init.body !== null) {
-        requestBody = Promise.resolve(init.body);
+        if (init.body instanceof ReadableStream) {
+          // A streamed body can be read once: the page's request gets one copy, we the other.
+          const [copy, original] = init.body.tee();
+          args[1] = { ...init, body: original };
+          requestBody = new Response(copy).arrayBuffer().then(readBody);
+        } else {
+          requestBody = readBody(init.body);
+        }
         hasBody = true;
       } else if (
         op &&
@@ -150,12 +187,10 @@ export function installNetworkTap(
       ) {
         // Some sites (YouTube) pass a Request with the body inside it: read a copy before
         // the native fetch consumes it.
-        requestBody = input
-          .clone()
-          .text()
-          .catch(() => undefined);
+        requestBody = input.clone().arrayBuffer().then(readBody);
         hasBody = true;
       }
+      requestBody = requestBody.catch(() => undefined);
     } catch {
       // Never break the page.
     }
@@ -191,18 +226,20 @@ export function installNetworkTap(
     const url = urls.get(this);
     const op = mode !== 'off' && url ? operationOf(url) : null;
     if (op) {
+      const requestBody = readBody(body).catch(() => undefined);
       this.addEventListener('load', () => {
         try {
-          if (NOT_JSON.test(this.getResponseHeader('content-type') ?? '')) {
-            const text =
-              this.responseType === '' || this.responseType === 'text' ? this.responseText : '';
-            emitUnlabelled(op, this.status, body, text);
-            return;
-          }
-          if (this.responseType === 'json') emit(op, this.status, body, this.response);
-          else if (this.responseType === '' || this.responseType === 'text') {
-            emitText(op, this.status, body, this.responseText);
-          }
+          const { status, responseType } = this;
+          const text = responseType === '' || responseType === 'text' ? this.responseText : '';
+          const json: unknown = responseType === 'json' ? this.response : undefined;
+          const labelledJson = !NOT_JSON.test(this.getResponseHeader('content-type') ?? '');
+          void requestBody.then((decoded) => {
+            if (!labelledJson) emitUnlabelled(op, status, decoded, text);
+            else if (responseType === 'json') emit(op, status, decoded, json);
+            else if (responseType === '' || responseType === 'text') {
+              emitText(op, status, decoded, text);
+            }
+          });
         } catch {
           // Never break the page.
         }
