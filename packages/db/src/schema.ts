@@ -1,8 +1,9 @@
-import { BOOKMARK_STATUSES } from '@bc/shared';
+import { BOOKMARK_STATUSES, ENRICHMENT_STATUSES } from '@bc/shared';
 import { sql } from 'drizzle-orm';
 import {
   check,
   index,
+  integer,
   jsonb,
   pgEnum,
   pgTable,
@@ -10,7 +11,11 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
+  vector,
 } from 'drizzle-orm/pg-core';
+
+/** Length of the vectors in `bookmark_embeddings`; the embedding model must produce this size. */
+export const EMBEDDING_DIMENSIONS = 1024;
 
 // Column names are converted to snake_case by the `casing` option (see client.ts and drizzle.config.ts).
 
@@ -23,6 +28,7 @@ const timestamps = {
 };
 
 export const bookmarkStatusEnum = pgEnum('bookmark_status', BOOKMARK_STATUSES);
+export const enrichmentStatusEnum = pgEnum('enrichment_status', ENRICHMENT_STATUSES);
 
 export const users = pgTable('users', {
   id: uuid().primaryKey().defaultRandom(),
@@ -96,6 +102,25 @@ export const bookmarks = pgTable(
     /** When the user saved it on the source platform. */
     savedAt: timestamp({ withTimezone: true }).notNull(),
     snoozeUntil: timestamp({ withTimezone: true }),
+
+    // ── AI enrichment (apps/api/src/modules/ai). Reset to pending when the content changes.
+    enrichmentStatus: enrichmentStatusEnum().notNull().default('pending'),
+    enrichmentAttempts: integer().notNull().default(0),
+    /**
+     * Not picked up before this time: a lease while a worker holds the row, a backoff after a
+     * failure. The worker only saves its result if the lease is still the one it took.
+     */
+    enrichmentRetryAt: timestamp({ withTimezone: true }),
+    enrichmentError: text(),
+    enrichedAt: timestamp({ withTimezone: true }),
+    headline: text(),
+    summary: text(),
+    topics: text().array().notNull().default([]),
+    /** One of `CONTENT_TYPES` / `SHELF_LIVES`; plain text so the taxonomy can grow freely. */
+    contentType: text(),
+    readMinutes: integer(),
+    shelfLife: text(),
+
     ...timestamps,
   },
   (t) => [
@@ -108,7 +133,34 @@ export const bookmarks = pgTable(
     index()
       .on(t.userId, t.snoozeUntil)
       .where(sql`${t.snoozeUntil} is not null`),
+    // Enrichment queue: pending rows, newest first.
+    index('bookmarks_enrichment_queue_idx')
+      .on(t.savedAt.desc())
+      .where(sql`${t.enrichmentStatus} = 'pending'`),
   ],
+);
+
+/**
+ * One vector per bookmark, for search by meaning. Kept out of `bookmarks` so ordinary listing
+ * queries don't carry a kilobyte-sized column per row.
+ */
+export const bookmarkEmbeddings = pgTable(
+  'bookmark_embeddings',
+  {
+    bookmarkId: uuid()
+      .primaryKey()
+      .references(() => bookmarks.id, { onDelete: 'cascade' }),
+    userId: uuid()
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** Vectors from different models aren't comparable; a model change re-embeds everything. */
+    model: text().notNull(),
+    embedding: vector({ dimensions: EMBEDDING_DIMENSIONS }).notNull(),
+    /** The bookmark's `enrichedAt` this vector was computed from; older means stale. */
+    sourceEnrichedAt: timestamp({ withTimezone: true }).notNull(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index().on(t.userId)],
 );
 
 export type UserRow = typeof users.$inferSelect;
@@ -117,3 +169,4 @@ export type SessionRow = typeof sessions.$inferSelect;
 export type ApiTokenRow = typeof apiTokens.$inferSelect;
 export type BookmarkRow = typeof bookmarks.$inferSelect;
 export type NewBookmarkRow = typeof bookmarks.$inferInsert;
+export type BookmarkEmbeddingRow = typeof bookmarkEmbeddings.$inferSelect;

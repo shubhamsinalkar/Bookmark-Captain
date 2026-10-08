@@ -3,6 +3,7 @@ import { createApp } from './app';
 import { loadEnv } from './config/env';
 import { createContext } from './context';
 import { createLogger } from './lib/logger';
+import { createEnrichmentWorker } from './modules/ai/enrichment.worker';
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 
@@ -21,6 +22,8 @@ const { db, pool } = createDb({
 });
 const ctx = createContext({ env, logger, db });
 const app = createApp(ctx);
+const worker =
+  ctx.enrichment && createEnrichmentWorker({ service: ctx.enrichment, events: ctx.events, logger });
 
 const server = app.listen(env.PORT, (error) => {
   if (error) {
@@ -28,6 +31,13 @@ const server = app.listen(env.PORT, (error) => {
     process.exit(1);
   }
   logger.info({ port: env.PORT, env: env.NODE_ENV }, 'API listening');
+  if (ctx.enrichment) {
+    logger.info(
+      { model: ctx.enrichment.model, embeddingModel: ctx.enrichment.embeddingModel },
+      'AI enrichment on',
+    );
+  }
+  worker?.start();
 });
 // Keep idle connections open longer than typical load balancers (60s) to avoid 502s.
 server.keepAliveTimeout = 65_000;
@@ -45,11 +55,14 @@ function shutdown(reason: string, exitCode = 0): void {
     process.exit(1);
   }, SHUTDOWN_TIMEOUT_MS).unref();
 
+  // Abort in-flight AI calls; the worker hands its claimed rows back while the pool is open.
+  const workerStopped = worker?.stop() ?? Promise.resolve();
+
   // Stop accepting connections, let in-flight requests finish, then release the pool.
   server.close((error) => {
     if (error) logger.error({ err: error }, 'Error while closing HTTP server');
-    pool
-      .end()
+    workerStopped
+      .then(() => pool.end())
       .catch((poolError: unknown) => logger.error({ err: poolError }, 'Error closing DB pool'))
       .finally(() => process.exit(error ? 1 : exitCode));
   });

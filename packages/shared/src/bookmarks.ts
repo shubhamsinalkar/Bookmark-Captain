@@ -13,6 +13,29 @@ export const BOOKMARK_STATUSES = ['unread', 'opened', 'done', 'archived'] as con
 export const bookmarkStatusSchema = z.enum(BOOKMARK_STATUSES);
 export type BookmarkStatus = z.infer<typeof bookmarkStatusSchema>;
 
+/** AI enrichment lifecycle: waiting (or retrying), finished, or given up on. */
+export const ENRICHMENT_STATUSES = ['pending', 'done', 'failed'] as const;
+export type EnrichmentStatus = (typeof ENRICHMENT_STATUSES)[number];
+
+/** What kind of thing a bookmark is, as judged by the AI. */
+export const CONTENT_TYPES = [
+  'article',
+  'tutorial',
+  'thread',
+  'discussion',
+  'video',
+  'tool',
+  'news',
+  'opinion',
+  'reference',
+  'other',
+] as const;
+export type ContentType = (typeof CONTENT_TYPES)[number];
+
+/** How long a bookmark stays worth reading: for years, for weeks, or only for days. */
+export const SHELF_LIVES = ['evergreen', 'timely', 'ephemeral'] as const;
+export type ShelfLife = (typeof SHELF_LIVES)[number];
+
 /** Inbox views. `inbox` = unread or opened, and not snoozed. */
 export const BOOKMARK_VIEWS = ['inbox', 'snoozed', 'done', 'archived', 'all'] as const;
 export const bookmarkViewSchema = z.enum(BOOKMARK_VIEWS);
@@ -123,6 +146,22 @@ export interface Bookmark {
   snoozeUntil: string | null;
   createdAt: string;
   updatedAt: string;
+  /** AI-written summary and labels. Null when AI enrichment is turned off on the server. */
+  ai: BookmarkEnrichment | null;
+}
+
+/** Fields are null (topics empty) until `status` is `done`. */
+export interface BookmarkEnrichment {
+  status: EnrichmentStatus;
+  /** A clear title, used for posts whose own "title" is just the start of their text. */
+  headline: string | null;
+  summary: string | null;
+  /** Lowercase, e.g. ["postgres", "performance"]. */
+  topics: string[];
+  contentType: ContentType | null;
+  /** Estimated minutes to read or watch; null when there is no way to tell. */
+  readMinutes: number | null;
+  shelfLife: ShelfLife | null;
 }
 
 /** A platform or site the user has bookmarks from (`GET /bookmarks/sources`). */
@@ -138,4 +177,5 @@ export interface BookmarkPage {
 
 /** Events pushed to open web tabs over server-sent events. */
 export type ServerEvent =
-  { type: 'bookmarks.changed'; reason: 'ingest' | 'update' | 'delete' } | { type: 'ready' };
+  | { type: 'bookmarks.changed'; reason: 'ingest' | 'update' | 'delete' | 'enrich' }
+  | { type: 'ready' };

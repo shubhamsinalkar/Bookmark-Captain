@@ -2,6 +2,7 @@ import { type BookmarkRow, bookmarks, type Database, type NewBookmarkRow } from 
 import {
   type Bookmark,
   type BookmarkSource,
+  type ContentType,
   type IngestResult,
   InvalidUrlError,
   type ingestItemSchema,
@@ -9,9 +10,23 @@ import {
   normalizeUrl,
   type NormalizedUrl,
   type Platform,
+  type ShelfLife,
   type updateBookmarkRequestSchema,
 } from '@bc/shared';
-import { and, desc, eq, gt, ilike, inArray, isNull, lte, or, type SQL, sql } from 'drizzle-orm';
+import {
+  and,
+  arrayContains,
+  desc,
+  eq,
+  gt,
+  ilike,
+  inArray,
+  isNull,
+  lte,
+  or,
+  type SQL,
+  sql,
+} from 'drizzle-orm';
 import { z } from 'zod';
 import type { EventBus } from '../../lib/event-bus';
 import { HttpError } from '../../lib/http-error';
@@ -22,7 +37,12 @@ type BookmarkPatch = z.output<typeof updateBookmarkRequestSchema>;
 
 const ACTIVE_STATUSES = ['unread', 'opened'] as const;
 
-export function toBookmarkDto(row: BookmarkRow): Bookmark {
+/**
+ * `aiEnabled`: whether this server enriches bookmarks. When it doesn't, rows still waiting
+ * for enrichment report `ai: null` instead of a "pending" that would never finish.
+ */
+export function toBookmarkDto(row: BookmarkRow, aiEnabled: boolean): Bookmark {
+  const enriched = row.enrichmentStatus === 'done';
   return {
     id: row.id,
     platform: row.platform,
@@ -39,6 +59,18 @@ export function toBookmarkDto(row: BookmarkRow): Bookmark {
     snoozeUntil: row.snoozeUntil?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
+    ai:
+      enriched || aiEnabled
+        ? {
+            status: row.enrichmentStatus,
+            headline: enriched ? row.headline : null,
+            summary: enriched ? row.summary : null,
+            topics: enriched ? row.topics : [],
+            contentType: enriched ? (row.contentType as ContentType | null) : null,
+            readMinutes: enriched ? row.readMinutes : null,
+            shelfLife: enriched ? (row.shelfLife as ShelfLife | null) : null,
+          }
+        : null,
   };
 }
 
@@ -128,6 +160,11 @@ export function createBookmarkService(db: Database, events: EventBus) {
       const nextText = sql`coalesce(${excluded('text')}, ${bookmarks.text})`;
       const nextThumbnail = sql`coalesce(${excluded('thumbnail_url')}, ${bookmarks.thumbnailUrl})`;
       const nextMetadata = sql`${bookmarks.metadata} || ${excluded('metadata')}`;
+      // New words mean a new summary; a moved folder or a refreshed thumbnail doesn't.
+      const contentChanged = sql`(${bookmarks.url}, ${bookmarks.title}, ${bookmarks.text})
+        is distinct from (${excluded('url')}, ${nextTitle}, ${nextText})`;
+      const ifContentChanged = (value: SQL, otherwise: SQL) =>
+        sql`case when ${contentChanged} then ${value} else ${otherwise} end`;
 
       const written = await db
         .insert(bookmarks)
@@ -142,6 +179,14 @@ export function createBookmarkService(db: Database, events: EventBus) {
             text: nextText,
             thumbnailUrl: nextThumbnail,
             metadata: nextMetadata,
+            // Re-queue for enrichment. Resetting the lease also voids any in-flight result.
+            enrichmentStatus: ifContentChanged(
+              sql`'pending'::enrichment_status`,
+              sql`${bookmarks.enrichmentStatus}`,
+            ),
+            enrichmentAttempts: ifContentChanged(sql`0`, sql`${bookmarks.enrichmentAttempts}`),
+            enrichmentRetryAt: ifContentChanged(sql`null`, sql`${bookmarks.enrichmentRetryAt}`),
+            enrichmentError: ifContentChanged(sql`null`, sql`${bookmarks.enrichmentError}`),
             updatedAt: now,
           },
           setWhere: sql`(${bookmarks.url}, ${bookmarks.canonicalUrl}, ${bookmarks.title}, ${bookmarks.author}, ${bookmarks.text}, ${bookmarks.thumbnailUrl}, ${bookmarks.metadata})
@@ -246,6 +291,9 @@ export function createBookmarkService(db: Database, events: EventBus) {
             ilike(bookmarks.title, pattern),
             ilike(bookmarks.url, pattern),
             ilike(bookmarks.author, pattern),
+            ilike(bookmarks.headline, pattern),
+            ilike(bookmarks.summary, pattern),
+            arrayContains(bookmarks.topics, [query.q.toLowerCase()]),
           ),
         );
       }

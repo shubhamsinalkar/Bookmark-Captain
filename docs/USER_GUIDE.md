@@ -50,6 +50,28 @@ no password).
 3. You should see **"Connected. Your browser bookmarks are being imported now."**
 4. The popup now shows **● Connected**. Your Chrome bookmarks start arriving in the inbox.
 
+### 1.5 Turn on AI summaries (optional)
+
+With AI on, every bookmark gets a short summary, a clear headline, topics, a type (tutorial,
+video, news…), a reading time and a "shelf life". Without it, the app works exactly as before.
+
+1. Pick a provider and add its lines to the project's `.env`:
+   - **Groq (free, no card).** Sign in at [console.groq.com](https://console.groq.com) →
+     **API Keys** → **Create API Key**, then:
+     ```bash
+     AI_PROVIDER=groq
+     AI_API_KEY=gsk_…
+     ```
+   - **Claude (paid, best summaries).** A key from the
+     [Claude Console](https://console.anthropic.com/): `ANTHROPIC_API_KEY=sk-ant-…`
+   - Others (Gemini, a local Ollama…): see the comments in `.env.example`.
+2. Optional, for search by meaning later: a [Voyage AI](https://dashboard.voyageai.com) key
+   (200M free tokens, no card) as `VOYAGE_API_KEY=pa-…`
+3. Restart `pnpm dev`. The API log says **AI enrichment on** and names the model.
+
+Bookmarks you already have are summarised in the background, newest first. On Groq's free tier
+that is about 150–200 bookmarks a day: a large library fills in over a few days, by itself.
+
 ---
 
 ## 2. Connect your platforms
@@ -130,9 +152,20 @@ A dot marks **unread** items; it disappears when you open the link.
 > post is still saved on the site, **Delete** only removes it here, and the next sync may bring
 > it back. To get rid of it for good, unsave it on the site.
 
+### AI summaries (when turned on, see 1.5)
+
+- A new item first shows **✨ Summarising…**; a few seconds later the card fills in by itself.
+- The line marked **✨** is written by AI. For posts, the AI headline replaces the post's
+  opening words; click **Show original** to read the post as saved.
+- Next to the author: what kind of thing it is (**Tutorial**, **Video**, **News**…), about how
+  long it takes to read or watch, and its shelf life: **Evergreen** (still useful in a year),
+  **Timely** (weeks or months) or **Short-lived** (read it soon or let it go).
+- Click a **#topic** to see everything you saved about it, from every platform.
+- When a post's text changes on the site, it is summarised again.
+
 ### Finding things
 
-- **Search** box: searches titles, links and authors.
+- **Search** box: searches titles, links, authors, and the AI headlines, summaries and topics.
 - **All platforms** dropdown: show only one source (X, Reddit, a website…).
 
 ### Adding things by hand
@@ -173,6 +206,9 @@ its own**:
 
 If `pnpm dev` isn't running, build it first: `pnpm --filter @bc/extension build`.
 
+If the inbox says **"Couldn't load bookmarks"** right after an update, the database needs the
+update too: run `pnpm db:migrate`, then reload the page.
+
 After an update that adds a new site, Chrome may ask you to **approve access** to that site
 when you reload the extension.
 
@@ -180,17 +216,20 @@ when you reload the extension.
 
 ## 7. Troubleshooting
 
-| You see                                                                           | What to do                                                                                    |
-| --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Connect page says the extension isn't installed                                   | The page was open before installing: click **Check again** or reload the page                 |
-| Settings says the extension "isn't installed" right after reloading the extension | The tab was open during the reload: reload the page (F5)                                      |
-| Popup not connected / "The access key was rejected"                               | Popup → **Connect account** → **Reconnect extension**                                         |
-| "Sign in to Reddit in this browser, then sync again" (or X/Instagram/YouTube)     | Log in to that site in this Chrome, then **Sync now**                                         |
-| "… didn't load your saved posts"                                                  | Click **Sync now**. If it repeats, the site may have changed — see below                      |
-| Nothing arrives at all                                                            | Is `pnpm dev` running? The popup's "waiting to sync" count shows what is queued               |
-| "N bookmarks were skipped: url: Too big…"                                         | Some Chrome bookmarks have extremely long addresses (over 4,096 characters); they are skipped |
-| Errors on `chrome://extensions` mentioning google.com / "Content Security Policy" | Harmless: the site blocking its own trackers, blamed on the extension. Click **Clear all**    |
-| A disconnected platform shows as connected again                                  | Note what you did just before, and report it                                                  |
+| You see                                                                           | What to do                                                                                                                                                                |
+| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Connect page says the extension isn't installed                                   | The page was open before installing: click **Check again** or reload the page                                                                                             |
+| Settings says the extension "isn't installed" right after reloading the extension | The tab was open during the reload: reload the page (F5)                                                                                                                  |
+| Popup not connected / "The access key was rejected"                               | Popup → **Connect account** → **Reconnect extension**                                                                                                                     |
+| "Sign in to Reddit in this browser, then sync again" (or X/Instagram/YouTube)     | Log in to that site in this Chrome, then **Sync now**                                                                                                                     |
+| "… didn't load your saved posts"                                                  | Click **Sync now**. If it repeats, the site may have changed — see below                                                                                                  |
+| Nothing arrives at all                                                            | Is `pnpm dev` running? The popup's "waiting to sync" count shows what is queued                                                                                           |
+| "N bookmarks were skipped: url: Too big…"                                         | Some Chrome bookmarks have extremely long addresses (over 4,096 characters); they are skipped                                                                             |
+| Errors on `chrome://extensions` mentioning google.com / "Content Security Policy" | Harmless: the site blocking its own trackers, blamed on the extension. Click **Clear all**                                                                                |
+| A disconnected platform shows as connected again                                  | Note what you did just before, and report it                                                                                                                              |
+| "Couldn't load bookmarks" after an update                                         | Run `pnpm db:migrate`, then reload the page                                                                                                                               |
+| **Summarising…** for a long time                                                  | Check the API log for "Enrichment paused" and its `reason`: a rate limit just waits (on Groq's free tier, sometimes until the next day); "was rejected" means a wrong key |
+| A card has no summary, but others do                                              | The AI gave up on it after a few tries (or declined it); it is retried if its text changes                                                                                |
 
 **When a site stops working.** X, Reddit, Instagram and YouTube change their websites from time
 to time. If imports or live saves stop working for one site, the connector for that site
@@ -203,6 +242,15 @@ error on `chrome://extensions` → Bookmark Captain → **Errors**, and what you
 
 - **Privacy.** Your passwords never leave Chrome. The extension reads your saved lists through
   your own logged-in session and sends only the saved items to your own server.
+- **AI summaries send your saved items to the AI provider.** With AI on, each bookmark's
+  title, link, text and author go to the provider you chose (Groq, Anthropic, …) to be
+  summarised, and the summary to Voyage AI if that key is set. Your passwords and anything else
+  in your browser do not. A local model (Ollama) keeps everything on your computer.
+- **What AI costs.** Each bookmark is summarised once (again only if its text changes). Groq's
+  free tier costs nothing but limits how many per day. With Claude it is roughly a cent per
+  bookmark on the default model; `AI_MODEL=claude-haiku-4-5` is about four times cheaper.
+- **Long posts.** With Groq or another OpenAI-compatible provider, only the first ~6,000
+  characters of a post are sent, to stay inside free-tier limits.
 - **One computer.** Platform syncing runs in the Chrome where you connected it.
 - **Saved dates.** X, Instagram and YouTube don't say _when_ you saved something. The first
   import uses each post's publish date (YouTube: the playlist order); later saves get the time
@@ -220,12 +268,14 @@ error on `chrome://extensions` → Bookmark Captain → **Errors**, and what you
 
 ## 9. Quick reference for development
 
-| Command                             | What it does                                      |
-| ----------------------------------- | ------------------------------------------------- |
-| `pnpm dev`                          | Run everything (website, API, extension rebuild)  |
-| `pnpm --filter @bc/extension build` | Build the extension into `apps/extension/dist`    |
-| `pnpm test`                         | Unit and API tests                                |
-| `pnpm test:e2e`                     | Browser tests (stop `pnpm dev` first: low memory) |
-| `pnpm lint` / `pnpm typecheck`      | Code checks                                       |
+| Command                               | What it does                                      |
+| ------------------------------------- | ------------------------------------------------- |
+| `pnpm dev`                            | Run everything (website, API, extension rebuild)  |
+| `pnpm --filter @bc/extension build`   | Build the extension into `apps/extension/dist`    |
+| `pnpm test`                           | Unit and API tests                                |
+| `pnpm test:e2e`                       | Browser tests (stop `pnpm dev` first: low memory) |
+| `pnpm lint` / `pnpm typecheck`        | Code checks                                       |
+| `pnpm --filter @bc/api ai status`     | AI progress, errors and the latest summaries      |
+| `pnpm --filter @bc/api ai search "…"` | Try search by meaning over the embeddings         |
 
 More technical detail: [README](../README.md) and [CLAUDE.md](../CLAUDE.md).

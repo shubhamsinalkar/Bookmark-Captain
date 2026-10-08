@@ -8,18 +8,14 @@ import {
   ClockIcon,
   FolderIcon,
   ReturnIcon,
+  SparkleIcon,
   TrashIcon,
 } from '@/components/ui/icons';
 import { SignalFlag } from '@/components/ui/signal-flag';
 import { buttonDanger, buttonGhost } from '@/components/ui/styles';
 import { useBookmarkMutations } from '@/hooks/use-bookmark-mutations';
-import {
-  displayHost,
-  displayUrl,
-  formatRelativeTime,
-  morningInDays,
-  snippetFor,
-} from '@/lib/format';
+import { cardText, CONTENT_TYPE_LABELS, formatMinutes, SHELF_LIFE_LABELS } from '@/lib/enrichment';
+import { displayHost, formatRelativeTime, morningInDays } from '@/lib/format';
 
 const SNOOZE_OPTIONS = [
   { label: 'Tomorrow morning', days: 1 },
@@ -35,10 +31,24 @@ const snoozeFormat = new Intl.DateTimeFormat(undefined, {
   minute: '2-digit',
 });
 
-export function BookmarkCard({ bookmark }: { bookmark: Bookmark }) {
+const SHELF_LIFE_COLORS = {
+  evergreen: 'text-good',
+  timely: 'text-ink-soft',
+  ephemeral: 'text-caution',
+} as const;
+
+export function BookmarkCard({
+  bookmark,
+  onTopicSelect,
+}: {
+  bookmark: Bookmark;
+  /** Called with a topic when its chip is clicked, e.g. to search for it. */
+  onTopicSelect?: (topic: string) => void;
+}) {
   const { update, remove } = useBookmarkMutations();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [snoozeOpen, setSnoozeOpen] = useState(false);
+  const [showOriginal, setShowOriginal] = useState(false);
   const snoozeRef = useRef<HTMLDivElement>(null);
 
   // Close the snooze menu on Escape or a click anywhere else.
@@ -67,8 +77,10 @@ export function BookmarkCard({ bookmark }: { bookmark: Bookmark }) {
   const isActive = isUnread || bookmark.status === 'opened';
   const isSnoozed = bookmark.snoozeUntil !== null && new Date(bookmark.snoozeUntil) > new Date();
   const folder = typeof bookmark.metadata.folder === 'string' ? bookmark.metadata.folder : null;
-  const title = bookmark.title ?? displayUrl(bookmark.url);
-  const snippet = snippetFor(bookmark.title, bookmark.text);
+  const { title, summary, original } = cardText(bookmark);
+  const enriched = bookmark.ai?.status === 'done' ? bookmark.ai : null;
+  const contentLabel = enriched?.contentType ? CONTENT_TYPE_LABELS[enriched.contentType] : null;
+  const shelfLife = enriched?.shelfLife ?? null;
 
   return (
     <article className="group relative flex gap-4 rounded-[inherit] px-4 py-4 transition-colors hover:bg-sunken/50 sm:px-5">
@@ -100,6 +112,20 @@ export function BookmarkCard({ bookmark }: { bookmark: Bookmark }) {
         <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px] text-ink-soft">
           {/* Posts show who wrote them; links show where they live. */}
           <span className="truncate">{bookmark.author ?? displayHost(bookmark.url)}</span>
+          {contentLabel && <span className="font-medium text-ink/80">{contentLabel}</span>}
+          {enriched?.readMinutes != null && (
+            <span title="Estimated time to read or watch">
+              {formatMinutes(enriched.readMinutes)}
+            </span>
+          )}
+          {shelfLife && (
+            <span
+              className={SHELF_LIFE_COLORS[shelfLife]}
+              title={SHELF_LIFE_LABELS[shelfLife].hint}
+            >
+              {SHELF_LIFE_LABELS[shelfLife].label}
+            </span>
+          )}
           <time dateTime={bookmark.savedAt} title={new Date(bookmark.savedAt).toLocaleString()}>
             Saved {formatRelativeTime(bookmark.savedAt)}
           </time>
@@ -111,7 +137,52 @@ export function BookmarkCard({ bookmark }: { bookmark: Bookmark }) {
           )}
         </p>
 
-        {snippet && <p className="mt-1.5 line-clamp-2 text-sm text-ink-soft">{snippet}</p>}
+        {summary && !showOriginal ? (
+          <p className="mt-1.5 line-clamp-3 text-sm text-ink-soft">
+            <SparkleIcon width="13" height="13" className="mr-1 -mt-0.5 inline text-focus" />
+            <span className="sr-only">AI summary: </span>
+            {summary}
+          </p>
+        ) : (
+          original && (
+            <p className="mt-1.5 line-clamp-4 text-sm whitespace-pre-line text-ink-soft">
+              {original}
+            </p>
+          )
+        )}
+        {summary && original && (
+          <button
+            type="button"
+            onClick={() => setShowOriginal((shown) => !shown)}
+            className="mt-0.5 rounded-sm text-[13px] font-medium text-ink-soft underline-offset-3 hover:text-ink hover:underline"
+          >
+            {showOriginal ? 'Show summary' : 'Show original'}
+          </button>
+        )}
+
+        {bookmark.ai?.status === 'pending' && (
+          <p className="mt-1.5 inline-flex items-center gap-1.5 text-[13px] text-ink-soft">
+            <SparkleIcon width="13" height="13" className="animate-pulse text-focus" />
+            Summarising…
+          </p>
+        )}
+
+        {enriched && enriched.topics.length > 0 && (
+          <ul aria-label="Topics" className="mt-2 flex flex-wrap gap-1.5">
+            {enriched.topics.map((topic) => (
+              <li key={topic}>
+                <button
+                  type="button"
+                  onClick={() => onTopicSelect?.(topic)}
+                  title={`Show bookmarks about ${topic}`}
+                  className="rounded-full bg-sunken px-2 py-0.5 text-xs text-ink-soft transition-colors hover:bg-rule hover:text-ink"
+                >
+                  #{topic}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
 
         {isSnoozed && bookmark.snoozeUntil && (
           <p className="mt-1.5 inline-flex items-center gap-1.5 text-[13px] font-medium text-caution">

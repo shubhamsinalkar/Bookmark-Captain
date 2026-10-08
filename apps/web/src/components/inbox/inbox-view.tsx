@@ -105,7 +105,7 @@ export function InboxView() {
               type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search titles, links and authors"
+              placeholder="Search titles, links, authors and topics"
               aria-label="Search bookmarks"
               className={`${input} pl-9`}
             />
@@ -164,7 +164,7 @@ export function InboxView() {
             <ul className={`${panel} divide-y divide-rule`}>
               {items.map((bookmark) => (
                 <li key={bookmark.id} className="first:rounded-t-xl last:rounded-b-xl">
-                  <BookmarkCard bookmark={bookmark} />
+                  <BookmarkCard bookmark={bookmark} onTopicSelect={setSearch} />
                 </li>
               ))}
             </ul>

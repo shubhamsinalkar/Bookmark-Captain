@@ -1,3 +1,4 @@
+import type { BookmarkRow } from '@bc/db';
 import {
   type BookmarkPage,
   createBookmarkRequestSchema,
@@ -26,13 +27,15 @@ function describeIssue(error: z.ZodError): string {
 
 export function createBookmarksRouter(ctx: AppContext): Router {
   const { bookmarks } = ctx;
+  const aiEnabled = ctx.enrichment !== null;
+  const toDto = (row: BookmarkRow) => toBookmarkDto(row, aiEnabled);
   const router = Router();
   router.use(requireAuth(ctx));
 
   router.get('/', async (req, res) => {
     const query = listBookmarksQuerySchema.parse(req.query);
     const { rows, nextCursor } = await bookmarks.list(getAuthUser(req).id, query);
-    res.json({ items: rows.map(toBookmarkDto), nextCursor } satisfies BookmarkPage);
+    res.json({ items: rows.map(toDto), nextCursor } satisfies BookmarkPage);
   });
 
   router.get('/sources', async (req, res) => {
@@ -42,7 +45,7 @@ export function createBookmarksRouter(ctx: AppContext): Router {
   router.post('/', async (req, res) => {
     const input = createBookmarkRequestSchema.parse(req.body);
     const { bookmark, created } = await bookmarks.create(getAuthUser(req).id, input);
-    res.status(created ? 201 : 200).json({ bookmark: toBookmarkDto(bookmark), created });
+    res.status(created ? 201 : 200).json({ bookmark: toDto(bookmark), created });
   });
 
   router.post('/ingest', createRateLimiter({ windowMs: 60_000, limit: 120 }), async (req, res) => {
@@ -80,7 +83,7 @@ export function createBookmarksRouter(ctx: AppContext): Router {
     const patch = updateBookmarkRequestSchema.parse(req.body);
     const row = await bookmarks.update(getAuthUser(req).id, id, patch);
     if (!row) throw HttpError.notFound('Bookmark not found');
-    res.json({ bookmark: toBookmarkDto(row) });
+    res.json({ bookmark: toDto(row) });
   });
 
   router.delete('/:id', async (req, res) => {

@@ -25,6 +25,25 @@ describe('loadEnv', () => {
     expect(env.GOOGLE_CLIENT_SECRET).toBeUndefined();
   });
 
+  it('treats empty AI settings as unset', () => {
+    const env = loadEnv({ ...base, AI_PROVIDER: '', ANTHROPIC_API_KEY: '', AI_MODEL: '' });
+    expect(env.AI_PROVIDER).toBeUndefined();
+    expect(env.ANTHROPIC_API_KEY).toBeUndefined();
+    expect(env.AI_MODEL).toBeUndefined();
+    expect(env.EMBEDDING_MODEL).toBe('voyage-4-lite');
+  });
+
+  it.each([
+    [{ AI_PROVIDER: 'groq' }, /AI_API_KEY/],
+    [{ AI_PROVIDER: 'anthropic' }, /ANTHROPIC_API_KEY/],
+    [{ AI_PROVIDER: 'openai-compatible', AI_MODEL: 'm' }, /AI_BASE_URL/],
+    [{ AI_PROVIDER: 'openai-compatible', AI_BASE_URL: 'http://localhost:11434/v1' }, /AI_MODEL/],
+    [{ AI_API_KEY: 'gsk_x' }, /AI_PROVIDER/],
+    [{ AI_PROVIDER: 'grok', AI_API_KEY: 'x' }, /AI_PROVIDER/],
+  ])('says what an AI provider is missing: %o', (overrides, message) => {
+    expect(() => loadEnv({ ...base, ...overrides })).toThrow(message);
+  });
+
   it('fails fast on missing required values', () => {
     expect(() => loadEnv({})).toThrow(/DATABASE_URL/);
   });

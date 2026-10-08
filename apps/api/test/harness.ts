@@ -6,6 +6,7 @@ import request from 'supertest';
 import { createApp } from '../src/app';
 import { loadEnv } from '../src/config/env';
 import { createContext } from '../src/context';
+import type { AiProviders } from '../src/modules/ai/enrichment.service';
 
 function requireTestDatabaseUrl(): string {
   const url = process.env.TEST_DATABASE_URL;
@@ -68,10 +69,13 @@ export function createTestHarness() {
 
   return {
     db,
-    /** Builds a fresh app (and fresh rate-limit counters). Also returns its context. */
-    createAppWithContext(envOverrides: Record<string, string> = {}) {
+    /**
+     * Builds a fresh app (and fresh rate-limit counters). Also returns its context. AI
+     * enrichment is off unless fake providers are passed.
+     */
+    createAppWithContext(envOverrides: Record<string, string> = {}, ai: AiProviders | null = null) {
       const env = createTestEnv(envOverrides);
-      const ctx = createContext({ env, logger: pino({ level: 'silent' }), db });
+      const ctx = createContext({ env, logger: pino({ level: 'silent' }), db, ai });
       return { app: createApp(ctx), ctx };
     },
     createApp(envOverrides: Record<string, string> = {}): Express {

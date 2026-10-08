@@ -2,6 +2,10 @@ import { EventEmitter } from 'node:events';
 import type { ServerEvent } from '@bc/shared';
 
 type Listener = (event: ServerEvent) => void;
+type GlobalListener = (userId: string, event: ServerEvent) => void;
+
+/** Channel carrying every user's events; a symbol can't collide with a user id. */
+const ALL_USERS = Symbol('all-users');
 
 /**
  * In-process, per-user pub/sub feeding the server-sent events stream.
@@ -18,11 +22,18 @@ export function createEventBus() {
   return {
     publish(userId: string, event: ServerEvent): void {
       emitter.emit(userId, event);
+      emitter.emit(ALL_USERS, userId, event);
     },
 
     subscribe(userId: string, listener: Listener): () => void {
       emitter.on(userId, listener);
       return () => emitter.off(userId, listener);
+    },
+
+    /** Every user's events, for in-process consumers such as background workers. */
+    subscribeAll(listener: GlobalListener): () => void {
+      emitter.on(ALL_USERS, listener);
+      return () => emitter.off(ALL_USERS, listener);
     },
 
     /** Registers a long-lived connection so shutdown can close it; returns an unregister fn. */

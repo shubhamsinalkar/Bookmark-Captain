@@ -70,6 +70,13 @@ export const FolderIcon = () => (
   </Icon>
 );
 
+/** Marks text written by AI. */
+export const SparkleIcon = (props: SVGProps<SVGSVGElement>) => (
+  <Icon {...props}>
+    <path d="M7 2.5c.45 2.7 1.3 3.55 4 4-2.7.45-3.55 1.3-4 4-.45-2.7-1.3-3.55-4-4 2.7-.45 3.55-1.3 4-4zM12.5 10v3.5M10.75 11.75h3.5" />
+  </Icon>
+);
+
 export const UploadIcon = () => (
   <Icon>
     <path d="M8 10.5V3M5 6l3-3 3 3M3 10.5V13h10v-2.5" />

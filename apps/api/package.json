@@ -8,9 +8,11 @@
     "build": "tsup",
     "start": "node --enable-source-maps dist/server.js",
     "typecheck": "tsc",
-    "test": "vitest run"
+    "test": "vitest run",
+    "ai": "tsx --env-file-if-exists=../../.env scripts/ai.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.132.0",
     "@bc/db": "workspace:^",
     "@bc/shared": "workspace:^",
     "cookie-parser": "^1.4.7",
