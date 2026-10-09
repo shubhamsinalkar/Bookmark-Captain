@@ -166,6 +166,16 @@ A dot marks **unread** items; it disappears when you open the link.
 ### Finding things
 
 - **Search** box: searches titles, links, authors, and the AI headlines, summaries and topics.
+- **Related by meaning** (needs `VOYAGE_API_KEY`, see 1.5): below the word matches, bookmarks
+  about the **same idea in other words**, e.g. "feeling stuck and unmotivated" finds motivation
+  reels that never use those words. It also helps with typos and Hindi/English mixes. If nothing
+  contains your words, you see these instead of "no matches".
+  - Works best with a few words describing what you want; single words are better served by
+    the normal search above it.
+  - Covers bookmarks that already have a summary; the note under the list says how many.
+  - Keeps working when summaries are switched off (only `VOYAGE_API_KEY` needed).
+  - "Search by meaning is busy": Voyage's free limit (3 searches a minute without a card on
+    file) was reached; wait a minute.
 - **All platforms** dropdown: show only one source (X, Reddit, a website…).
 
 ### Adding things by hand

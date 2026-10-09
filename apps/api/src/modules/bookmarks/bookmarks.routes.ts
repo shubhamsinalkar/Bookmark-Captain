@@ -7,6 +7,8 @@ import {
   ingestRequestSchema,
   listBookmarksQuerySchema,
   removeBySourceRequestSchema,
+  type SearchByMeaningResult,
+  searchByMeaningQuerySchema,
   updateBookmarkRequestSchema,
 } from '@bc/shared';
 import { Router } from 'express';
@@ -16,6 +18,7 @@ import { HttpError } from '../../lib/http-error';
 import { parseIdParam } from '../../lib/params';
 import { createRateLimiter } from '../../middleware/rate-limit';
 import { getAuthUser, requireAuth } from '../../middleware/require-auth';
+import { AiError } from '../ai/ai-error';
 import { toBookmarkDto } from './bookmark.service';
 
 /** "url: Too big: expected string to have <=4096 characters" — the first issue is enough. */
@@ -36,6 +39,36 @@ export function createBookmarksRouter(ctx: AppContext): Router {
     const query = listBookmarksQuerySchema.parse(req.query);
     const { rows, nextCursor } = await bookmarks.list(getAuthUser(req).id, query);
     res.json({ items: rows.map(toDto), nextCursor } satisfies BookmarkPage);
+  });
+
+  // Search by meaning. Its own limiter: each new query is a call to the embedding provider.
+  router.get('/search', createRateLimiter({ windowMs: 60_000, limit: 30 }), async (req, res) => {
+    const query = searchByMeaningQuerySchema.parse(req.query);
+    if (!ctx.search) {
+      res.json({
+        available: false,
+        items: [],
+        indexed: 0,
+        total: 0,
+      } satisfies SearchByMeaningResult);
+      return;
+    }
+    let result;
+    try {
+      result = await ctx.search.search(getAuthUser(req).id, query);
+    } catch (error) {
+      if (!(error instanceof AiError)) throw error;
+      req.log.warn({ err: error }, 'Search by meaning failed');
+      throw HttpError.serviceUnavailable(
+        'Search by meaning is busy right now. Try again in a minute.',
+      );
+    }
+    res.json({
+      available: true,
+      items: result.matches.map(({ row, similarity }) => ({ bookmark: toDto(row), similarity })),
+      indexed: result.indexed,
+      total: result.total,
+    } satisfies SearchByMeaningResult);
   });
 
   router.get('/sources', async (req, res) => {

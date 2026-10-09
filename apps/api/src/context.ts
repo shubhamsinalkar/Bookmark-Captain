@@ -2,12 +2,9 @@ import type { Database } from '@bc/db';
 import type { Logger } from 'pino';
 import type { Env } from './config/env';
 import { createEventBus, type EventBus } from './lib/event-bus';
-import {
-  type AiProviders,
-  createEnrichmentService,
-  type EnrichmentService,
-} from './modules/ai/enrichment.service';
-import { aiProvidersFromEnv } from './modules/ai/providers';
+import { createEnrichmentService, type EnrichmentService } from './modules/ai/enrichment.service';
+import { aiProvidersFromEnv, type ConfiguredAi } from './modules/ai/providers';
+import { createSearchService, type SearchService } from './modules/ai/search.service';
 import {
   type ApiTokenService,
   createApiTokenService,
@@ -29,6 +26,8 @@ export interface AppContext {
   bookmarks: BookmarkService;
   /** Null when no AI provider is configured. */
   enrichment: EnrichmentService | null;
+  /** Search by meaning; null without an embedding provider (VOYAGE_API_KEY). */
+  search: SearchService | null;
   /** Null when Google sign-in is not configured. */
   google: GoogleOAuthConfig | null;
 }
@@ -40,7 +39,7 @@ export function createContext({
   ai = aiProvidersFromEnv(env),
 }: Pick<AppContext, 'env' | 'logger' | 'db'> & {
   /** AI providers; defaults to the ones configured in `env`. Tests pass fakes. */
-  ai?: AiProviders | null;
+  ai?: ConfiguredAi | null;
 }): AppContext {
   const google =
     env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET
@@ -61,7 +60,13 @@ export function createContext({
     apiTokens: createApiTokenService(db),
     users: createUserRepository(db),
     bookmarks: createBookmarkService(db, events),
-    enrichment: ai && createEnrichmentService(db, events, logger, ai),
+    enrichment: ai?.enricher
+      ? createEnrichmentService(db, events, logger, {
+          enricher: ai.enricher,
+          embedder: ai.embedder,
+        })
+      : null,
+    search: ai?.embedder ? createSearchService(db, ai.embedder) : null,
     google,
   };
 }

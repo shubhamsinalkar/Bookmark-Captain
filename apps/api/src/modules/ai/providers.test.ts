@@ -13,16 +13,21 @@ const providers = (env: Record<string, string>) => aiProvidersFromEnv(loadEnv({ 
 describe('aiProvidersFromEnv', () => {
   it('is off without any AI configuration', () => {
     expect(providers({})).toBeNull();
-    expect(providers({ VOYAGE_API_KEY: 'pa-x' })).toBeNull();
+  });
+
+  it('can embed (for search by meaning) with summaries switched off', () => {
+    const result = providers({ VOYAGE_API_KEY: 'pa-x' });
+    expect(result?.enricher).toBeNull();
+    expect(result?.embedder?.model).toBe('voyage-4-lite');
   });
 
   it('picks Claude from ANTHROPIC_API_KEY alone, as before', () => {
-    expect(providers({ ANTHROPIC_API_KEY: 'sk-ant-x' })?.enricher.model).toBe('claude-opus-5-5');
+    expect(providers({ ANTHROPIC_API_KEY: 'sk-ant-x' })?.enricher?.model).toBe('claude-opus-5-5');
   });
 
   it('uses Groq with its default free model', () => {
     const result = providers({ AI_PROVIDER: 'groq', AI_API_KEY: 'gsk_x' });
-    expect(result?.enricher.model).toBe('groq/openai/gpt-oss-120b');
+    expect(result?.enricher?.model).toBe('groq/openai/gpt-oss-120b');
     expect(result?.embedder).toBeNull();
   });
 
@@ -37,6 +42,6 @@ describe('aiProvidersFromEnv', () => {
       AI_BASE_URL: 'http://localhost:11434/v1',
       AI_MODEL: 'qwen3:4b',
     });
-    expect(result?.enricher.model).toBe('localhost/qwen3:4b');
+    expect(result?.enricher?.model).toBe('localhost/qwen3:4b');
   });
 });

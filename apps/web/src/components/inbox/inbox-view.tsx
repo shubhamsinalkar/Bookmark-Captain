@@ -1,7 +1,7 @@
 'use client';
 
 import { type BookmarkView, type Platform, platformLabel, platformSchema } from '@bc/shared';
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useState } from 'react';
 import { SearchIcon } from '@/components/ui/icons';
@@ -13,12 +13,17 @@ import {
   listBookmarks,
   listBookmarkSources,
   queryKeys,
+  searchByMeaning,
 } from '@/lib/api/bookmarks';
 import { AddLinkForm } from './add-link-form';
 import { BookmarkCard } from './bookmark-card';
 import { ImportBookmarksButton } from './import-bookmarks-button';
+import { MeaningResults } from './meaning-results';
 
 const numberFormat = new Intl.NumberFormat('en');
+
+/** Shorter searches are usually still being typed, and don't carry a meaning to match. */
+const MIN_MEANING_QUERY = 3;
 
 const VIEWS: { value: BookmarkView; label: string }[] = [
   { value: 'inbox', label: 'Inbox' },
@@ -54,6 +59,19 @@ export function InboxView() {
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
   });
+
+  // Alongside the word search, find bookmarks about the same idea in other words.
+  const meaningQ = q.length >= MIN_MEANING_QUERY ? q : undefined;
+  const meaning = useQuery({
+    queryKey: queryKeys.bookmarkMeaningSearch({ view, platform, q: meaningQ }),
+    queryFn: () => searchByMeaning({ view, platform, q: meaningQ! }),
+    enabled: meaningQ !== undefined,
+    // Keep showing the last results while the next search loads, instead of jumping.
+    placeholderData: keepPreviousData,
+    // A 503 means the embedding provider is rate limited; retrying right away won't help.
+    retry: false,
+  });
+  const meaningCount = meaningQ && meaning.data?.available ? meaning.data.items.length : 0;
 
   const sources = useQuery({ queryKey: queryKeys.bookmarkSources, queryFn: listBookmarkSources });
 
@@ -145,6 +163,15 @@ export function InboxView() {
               Try again
             </button>
           </div>
+        ) : items.length === 0 && meaningQ && meaning.isPending ? (
+          <LoadingList />
+        ) : items.length === 0 && meaningCount > 0 ? (
+          <>
+            <p className={hint}>
+              No bookmarks contain &ldquo;{q}&rdquo;, but these are about the same thing.
+            </p>
+            <MeaningResults search={meaning} onTopicSelect={setSearch} />
+          </>
         ) : items.length === 0 ? (
           <div className="rounded-xl border border-dashed border-rule-strong px-6 py-16 text-center">
             <p className="text-lg font-semibold font-stretch-112%">
@@ -180,6 +207,7 @@ export function InboxView() {
                 </button>
               </div>
             )}
+            {meaningQ && <MeaningResults search={meaning} onTopicSelect={setSearch} />}
           </>
         )}
       </section>

@@ -130,6 +130,32 @@ export const listBookmarksQuerySchema = z.object({
 });
 export type ListBookmarksQuery = z.input<typeof listBookmarksQuerySchema>;
 
+/** `GET /bookmarks/search`: bookmarks closest in meaning to `q` (embeddings). */
+export const searchByMeaningQuerySchema = z.object({
+  q: z.string().trim().min(2).max(200),
+  view: bookmarkViewSchema.default('inbox'),
+  platform: platformSchema.optional(),
+  limit: z.coerce.number().int().min(1).max(30).default(10),
+  /** Leave out bookmarks the word search (`GET /bookmarks?q=`) already returns. */
+  excludeWordMatches: z.stringbool().default(false),
+});
+export type SearchByMeaningQuery = z.input<typeof searchByMeaningQuerySchema>;
+
+export interface BookmarkMatch {
+  bookmark: Bookmark;
+  /** Cosine similarity, 0–1: higher is closer in meaning. */
+  similarity: number;
+}
+
+export interface SearchByMeaningResult {
+  /** False when the server has no embedding provider; clients hide meaning search. */
+  available: boolean;
+  items: BookmarkMatch[];
+  /** The user's bookmarks that have a vector to search, out of all of them. */
+  indexed: number;
+  total: number;
+}
+
 export interface Bookmark {
   id: string;
   platform: Platform;

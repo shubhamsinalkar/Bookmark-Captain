@@ -1,9 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { AiProviderName, Env } from '../../config/env';
 import { createClaudeEnricher } from './claude-enricher';
-import { createVoyageEmbedder } from './embedder';
+import { createVoyageEmbedder, type Embedder } from './embedder';
 import type { Enricher } from './enricher';
-import type { AiProviders } from './enrichment.service';
 import { createOpenAiCompatibleEnricher } from './openai-compatible-enricher';
 
 export const DEFAULT_MODELS = {
@@ -46,14 +45,21 @@ function enricherFromEnv(env: Env): Enricher | null {
   }
 }
 
-/** AI providers configured in `env`, or null when enrichment is off. */
-export function aiProvidersFromEnv(env: Env): AiProviders | null {
+/**
+ * Summaries and embeddings are configured independently: search by meaning keeps working
+ * with only VOYAGE_API_KEY (over what's already embedded), e.g. with summaries switched off
+ * to save a free tier's quota.
+ */
+export interface ConfiguredAi {
+  enricher: Enricher | null;
+  embedder: Embedder | null;
+}
+
+/** The AI providers configured in `env`, or null when there are none. */
+export function aiProvidersFromEnv(env: Env): ConfiguredAi | null {
   const enricher = enricherFromEnv(env);
-  if (!enricher) return null;
-  return {
-    enricher,
-    embedder: env.VOYAGE_API_KEY
-      ? createVoyageEmbedder({ apiKey: env.VOYAGE_API_KEY, model: env.EMBEDDING_MODEL })
-      : null,
-  };
+  const embedder = env.VOYAGE_API_KEY
+    ? createVoyageEmbedder({ apiKey: env.VOYAGE_API_KEY, model: env.EMBEDDING_MODEL })
+    : null;
+  return enricher || embedder ? { enricher, embedder } : null;
 }

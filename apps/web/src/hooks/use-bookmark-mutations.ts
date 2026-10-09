@@ -1,6 +1,11 @@
 'use client';
 
-import type { Bookmark, BookmarkPage, UpdateBookmarkRequest } from '@bc/shared';
+import type {
+  Bookmark,
+  BookmarkPage,
+  SearchByMeaningResult,
+  UpdateBookmarkRequest,
+} from '@bc/shared';
 import {
   type InfiniteData,
   type QueryKey,
@@ -16,7 +21,7 @@ import {
 import { matchesView } from '@/lib/bookmark-view';
 
 type Pages = InfiniteData<BookmarkPage, string | null>;
-type Snapshot = [QueryKey, Pages | undefined][];
+type Snapshot = [QueryKey, unknown][];
 
 function applyPatch(bookmark: Bookmark, patch: UpdateBookmarkRequest): Bookmark {
   return {
@@ -36,11 +41,18 @@ export function useBookmarkMutations() {
   async function updateCachedLists(
     transform: (bookmark: Bookmark, filters: BookmarkFilters) => Bookmark | null,
   ): Promise<Snapshot> {
-    // Lists only: other queries under 'bookmarks' (e.g. sources) hold different data.
-    await queryClient.cancelQueries({ queryKey: queryKeys.bookmarkLists });
-    const snapshot = queryClient.getQueriesData<Pages>({ queryKey: queryKeys.bookmarkLists });
+    // Lists and meaning searches only: other queries under 'bookmarks' (e.g. sources) hold
+    // different data.
+    await Promise.all([
+      queryClient.cancelQueries({ queryKey: queryKeys.bookmarkLists }),
+      queryClient.cancelQueries({ queryKey: queryKeys.bookmarkMeaningSearches }),
+    ]);
+    const lists = queryClient.getQueriesData<Pages>({ queryKey: queryKeys.bookmarkLists });
+    const searches = queryClient.getQueriesData<SearchByMeaningResult>({
+      queryKey: queryKeys.bookmarkMeaningSearches,
+    });
 
-    for (const [key, data] of snapshot) {
+    for (const [key, data] of lists) {
       if (!data) continue;
       const filters = key[2] as BookmarkFilters;
       queryClient.setQueryData<Pages>(key, {
@@ -51,7 +63,18 @@ export function useBookmarkMutations() {
         })),
       });
     }
-    return snapshot;
+    for (const [key, data] of searches) {
+      if (!data) continue;
+      const filters = key[2] as BookmarkFilters;
+      queryClient.setQueryData<SearchByMeaningResult>(key, {
+        ...data,
+        items: data.items.flatMap((match) => {
+          const bookmark = transform(match.bookmark, filters);
+          return bookmark ? [{ ...match, bookmark }] : [];
+        }),
+      });
+    }
+    return [...lists, ...searches];
   }
 
   const handlers = {

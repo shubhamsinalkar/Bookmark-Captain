@@ -2,6 +2,7 @@ import { type BookmarkRow, bookmarks, type Database, type NewBookmarkRow } from 
 import {
   type Bookmark,
   type BookmarkSource,
+  type BookmarkView,
   type ContentType,
   type IngestResult,
   InvalidUrlError,
@@ -93,6 +94,41 @@ function decodeCursor(cursor: string): z.infer<typeof cursorSchema> {
 
 function escapeLikePattern(value: string): string {
   return value.replace(/[\\%_]/g, '\\$&');
+}
+
+/** Which bookmarks a view shows. Mirrored in apps/web/src/lib/bookmark-view.ts. */
+export function viewCondition(view: BookmarkView, now: Date): SQL | undefined {
+  switch (view) {
+    case 'inbox':
+      return and(
+        inArray(bookmarks.status, ACTIVE_STATUSES),
+        or(isNull(bookmarks.snoozeUntil), lte(bookmarks.snoozeUntil, now)),
+      );
+    case 'snoozed':
+      return and(inArray(bookmarks.status, ACTIVE_STATUSES), gt(bookmarks.snoozeUntil, now));
+    case 'done':
+    case 'archived':
+      return eq(bookmarks.status, view);
+    case 'all':
+      return undefined;
+  }
+}
+
+/**
+ * The word search behind `GET /bookmarks?q=`. Never null (a null column inside `or` can make
+ * it so), so `not(...)` of it is safe.
+ */
+export function wordMatchCondition(q: string): SQL {
+  const pattern = `%${escapeLikePattern(q)}%`;
+  const matches = or(
+    ilike(bookmarks.title, pattern),
+    ilike(bookmarks.url, pattern),
+    ilike(bookmarks.author, pattern),
+    ilike(bookmarks.headline, pattern),
+    ilike(bookmarks.summary, pattern),
+    arrayContains(bookmarks.topics, [q.toLowerCase()]),
+  );
+  return sql`coalesce(${matches}, false)`;
 }
 
 function normalizeOrReject(url: string): NormalizedUrl {
@@ -258,45 +294,12 @@ export function createBookmarkService(db: Database, events: EventBus) {
       userId: string,
       query: ListQuery,
     ): Promise<{ rows: BookmarkRow[]; nextCursor: string | null }> {
-      const now = new Date();
-      const conditions: (SQL | undefined)[] = [eq(bookmarks.userId, userId)];
-
-      switch (query.view) {
-        case 'inbox':
-          conditions.push(
-            inArray(bookmarks.status, ACTIVE_STATUSES),
-            or(isNull(bookmarks.snoozeUntil), lte(bookmarks.snoozeUntil, now)),
-          );
-          break;
-        case 'snoozed':
-          conditions.push(
-            inArray(bookmarks.status, ACTIVE_STATUSES),
-            gt(bookmarks.snoozeUntil, now),
-          );
-          break;
-        case 'done':
-        case 'archived':
-          conditions.push(eq(bookmarks.status, query.view));
-          break;
-        case 'all':
-          break;
-      }
-
+      const conditions: (SQL | undefined)[] = [
+        eq(bookmarks.userId, userId),
+        viewCondition(query.view, new Date()),
+      ];
       if (query.platform) conditions.push(eq(bookmarks.platform, query.platform));
-
-      if (query.q) {
-        const pattern = `%${escapeLikePattern(query.q)}%`;
-        conditions.push(
-          or(
-            ilike(bookmarks.title, pattern),
-            ilike(bookmarks.url, pattern),
-            ilike(bookmarks.author, pattern),
-            ilike(bookmarks.headline, pattern),
-            ilike(bookmarks.summary, pattern),
-            arrayContains(bookmarks.topics, [query.q.toLowerCase()]),
-          ),
-        );
-      }
+      if (query.q) conditions.push(wordMatchCondition(query.q));
 
       if (query.cursor) {
         const cursor = decodeCursor(query.cursor);

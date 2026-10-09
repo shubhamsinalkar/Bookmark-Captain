@@ -19,7 +19,7 @@ const shorten = (value: string | null, max: number) =>
 
 async function status(): Promise<void> {
   const providers = aiProvidersFromEnv(env);
-  console.log(`AI provider:  ${providers?.enricher.model ?? 'off (see .env.example)'}`);
+  console.log(`AI provider:  ${providers?.enricher?.model ?? 'off (see .env.example)'}`);
   console.log(`Embeddings:   ${providers?.embedder?.model ?? 'off (no VOYAGE_API_KEY)'}\n`);
 
   const byStatus = await db

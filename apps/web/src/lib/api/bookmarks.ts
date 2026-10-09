@@ -8,6 +8,7 @@ import type {
   IngestItem,
   IngestResult,
   Platform,
+  SearchByMeaningResult,
   UpdateBookmarkRequest,
 } from '@bc/shared';
 import { apiFetch } from './client';
@@ -23,6 +24,9 @@ export const queryKeys = {
   /** Every cached bookmark list (all filters); paged `BookmarkPage` data only. */
   bookmarkLists: ['bookmarks', 'list'] as const,
   bookmarkList: (filters: BookmarkFilters) => ['bookmarks', 'list', filters] as const,
+  /** Every cached search by meaning; `SearchByMeaningResult` data. */
+  bookmarkMeaningSearches: ['bookmarks', 'meaning'] as const,
+  bookmarkMeaningSearch: (filters: BookmarkFilters) => ['bookmarks', 'meaning', filters] as const,
   // Under 'bookmarks', so it refreshes whenever bookmarks change.
   bookmarkSources: ['bookmarks', 'sources'] as const,
   apiTokens: ['api-tokens'] as const,
@@ -38,6 +42,20 @@ export function listBookmarks(filters: BookmarkFilters, cursor?: string): Promis
   if (filters.q) params.set('q', filters.q);
   if (cursor) params.set('cursor', cursor);
   return apiFetch(`/bookmarks?${params.toString()}`);
+}
+
+/**
+ * Bookmarks related to `q` by meaning, leaving out those the word search already lists.
+ * Refetches are cheap: the API caches each query's embedding.
+ */
+export function searchByMeaning(filters: BookmarkFilters & { q: string }) {
+  const params = new URLSearchParams({
+    q: filters.q,
+    view: filters.view,
+    excludeWordMatches: 'true',
+  });
+  if (filters.platform) params.set('platform', filters.platform);
+  return apiFetch<SearchByMeaningResult>(`/bookmarks/search?${params.toString()}`);
 }
 
 export function createBookmark(input: { url: string; title?: string }) {
