@@ -29,10 +29,14 @@ export function BookmarkCollection({
       className={`${layout === 'grid' ? GRID : LIST} transition-opacity ${dimmed ? 'opacity-60' : ''}`}
     >
       {items.map((bookmark) => (
-        // A grid item stretches its card to the row's height, so footers line up.
+        // A grid item stretches its card to the row's height, so footers line up. Its one column is
+        // minmax(0, 1fr): an `auto` column would grow to fit a long unbreakable host name and push
+        // the card over its neighbours instead of truncating it.
         <li
           key={bookmark.id}
-          className={layout === 'list' ? 'first:rounded-t-2xl last:rounded-b-2xl' : 'grid'}
+          className={
+            layout === 'list' ? 'first:rounded-t-2xl last:rounded-b-2xl' : 'grid grid-cols-1'
+          }
         >
           <BookmarkCard
             bookmark={bookmark}
