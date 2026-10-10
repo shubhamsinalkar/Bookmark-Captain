@@ -32,7 +32,10 @@ export function createApp(ctx: AppContext): Express {
         res.setHeader(REQUEST_ID_HEADER, id);
         return id;
       },
-      autoLogging: { ignore: (req) => req.url === '/healthz' },
+      // Per-request logs ("request completed") are off for now. To see them again, remove
+      // `autoLogging: false` and uncomment the line below it.
+      autoLogging: false,
+      // autoLogging: { ignore: (req) => req.url === '/healthz' },
     }),
   );
   app.use(helmet());
