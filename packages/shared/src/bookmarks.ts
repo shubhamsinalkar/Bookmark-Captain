@@ -196,6 +196,17 @@ export interface BookmarkSource {
   count: number;
 }
 
+/** `GET /bookmarks/counts`: how many bookmarks each view shows right now. */
+export interface BookmarkCounts {
+  inbox: number;
+  /** Inbox items not opened yet. */
+  unread: number;
+  snoozed: number;
+  done: number;
+  archived: number;
+  all: number;
+}
+
 export interface BookmarkPage {
   items: Bookmark[];
   nextCursor: string | null;

@@ -54,7 +54,7 @@ test('the extension connects, imports, and syncs bookmark changes live', async (
   // The popup reflects the connection; disconnecting revokes the extension's key.
   const popup = await extensionContext.newPage();
   await popup.goto(`chrome-extension://${extensionId}/popup.html`);
-  await expect(popup.getByText('● Connected')).toBeVisible();
+  await expect(popup.getByText('Connected', { exact: true })).toBeVisible();
 
   await page.goto('/settings');
   const devices = page.getByRole('listitem').filter({ hasText: 'Chrome extension' });

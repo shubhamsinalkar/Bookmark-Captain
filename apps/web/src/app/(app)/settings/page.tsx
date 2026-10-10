@@ -1,54 +1,80 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { ConnectedDevices } from '@/components/settings/connected-devices';
 import { PlatformConnections } from '@/components/settings/platform-connections';
-import { buttonSecondary, hint } from '@/components/ui/styles';
+import { PlatformLogo } from '@/components/ui/platform-logo';
+import { buttonSecondary, hint, pageTitle, panel } from '@/components/ui/styles';
 
 export const metadata: Metadata = { title: 'Settings' };
 
-const section = 'grid gap-x-10 gap-y-4 border-t border-rule py-8 sm:grid-cols-[13rem_1fr]';
+function Section({
+  id,
+  title,
+  description,
+  children,
+}: {
+  id?: string;
+  title: string;
+  description: string;
+  children: ReactNode;
+}) {
+  return (
+    <section
+      id={id}
+      className="grid scroll-mt-24 gap-x-12 gap-y-4 border-t border-rule py-9 lg:grid-cols-[16rem_minmax(0,1fr)]"
+    >
+      <div className="space-y-1.5">
+        <h2 className="text-base font-semibold">{title}</h2>
+        <p className={`${hint} max-w-sm`}>{description}</p>
+      </div>
+      <div className="min-w-0">{children}</div>
+    </section>
+  );
+}
 
 export default function SettingsPage() {
   return (
-    <div>
-      <h1 className="pb-8 text-2xl font-bold tracking-tight font-stretch-112%">Settings</h1>
+    <div className="max-w-5xl">
+      <header className="pb-8">
+        <h1 className={pageTitle}>Settings</h1>
+        <p className={`${hint} mt-1`}>
+          Choose where your saves come from and which devices can add them.
+        </p>
+      </header>
 
-      <section id="platforms" className={section}>
-        <div className="space-y-1">
-          <h2 className="font-semibold">Platforms</h2>
-          <p className={hint}>
-            Bring in posts you save on other sites. New saves keep arriving on their own.
-          </p>
-        </div>
+      <Section
+        id="platforms"
+        title="Platforms"
+        description="Bring in the posts you save on other sites. New saves keep arriving on their own."
+      >
         <PlatformConnections />
-      </section>
+      </Section>
 
-      <section className={section}>
-        <div className="space-y-1">
-          <h2 className="font-semibold">Chrome extension</h2>
-          <p className={hint}>Sync your browser bookmarks automatically.</p>
-        </div>
-        <div className="space-y-4">
-          <p className="max-w-prose text-sm leading-relaxed">
-            The extension imports your browser bookmarks and keeps them in sync as you add, edit or
-            remove them.
-          </p>
+      <Section
+        title="Chrome extension"
+        description="Keeps your browser bookmarks in sync, and reads your saved lists on other sites."
+      >
+        <div className={`${panel} flex flex-wrap items-center gap-4 p-5`}>
+          <PlatformLogo platform="browser" size={44} />
+          <div className="min-w-[12rem] flex-1">
+            <p className="font-semibold">Bookmark Captain for Chrome</p>
+            <p className={`${hint} mt-0.5 max-w-prose`}>
+              Imports your browser bookmarks, then follows every bookmark you add, edit or remove.
+            </p>
+          </div>
           <Link href="/extension/connect" className={buttonSecondary}>
             Connect the extension
           </Link>
         </div>
-      </section>
+      </Section>
 
-      <section className={section}>
-        <div className="space-y-1">
-          <h2 className="font-semibold">Connected devices</h2>
-          <p className={hint}>
-            Extensions and apps that can add to your bookmarks. Disconnect any you don&apos;t
-            recognise.
-          </p>
-        </div>
+      <Section
+        title="Connected devices"
+        description="Extensions and apps that can add to your bookmarks. Disconnect any you don’t recognise."
+      >
         <ConnectedDevices />
-      </section>
+      </Section>
     </div>
   );
 }

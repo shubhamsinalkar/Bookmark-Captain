@@ -1,6 +1,7 @@
 import type {
   ApiTokenSummary,
   Bookmark,
+  BookmarkCounts,
   BookmarkPage,
   BookmarkSource,
   BookmarkView,
@@ -29,11 +30,16 @@ export const queryKeys = {
   bookmarkMeaningSearch: (filters: BookmarkFilters) => ['bookmarks', 'meaning', filters] as const,
   // Under 'bookmarks', so it refreshes whenever bookmarks change.
   bookmarkSources: ['bookmarks', 'sources'] as const,
+  bookmarkCounts: ['bookmarks', 'counts'] as const,
   apiTokens: ['api-tokens'] as const,
 };
 
 export async function listBookmarkSources(): Promise<BookmarkSource[]> {
   return (await apiFetch<{ sources: BookmarkSource[] }>('/bookmarks/sources')).sources;
+}
+
+export function getBookmarkCounts(): Promise<BookmarkCounts> {
+  return apiFetch('/bookmarks/counts');
 }
 
 export function listBookmarks(filters: BookmarkFilters, cursor?: string): Promise<BookmarkPage> {

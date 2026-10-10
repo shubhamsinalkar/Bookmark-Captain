@@ -7,11 +7,19 @@
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
-    <header>
-      <h1>Bookmark Captain</h1>
+    <header class="top">
+      <h1>
+        <span class="brand" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="13" height="13">
+            <path d="M6 2.5h12a1 1 0 0 1 1 1V22l-7-4.9L5 22V3.5a1 1 0 0 1 1-1Z" fill="#fff" />
+          </svg>
+        </span>
+        Bookmark Captain
+      </h1>
+      <span id="top-actions"></span>
     </header>
     <main id="app" aria-live="polite">
-      <p class="muted">Loading…</p>
+      <p class="muted pad">Loading…</p>
     </main>
     <script src="popup.js"></script>
   </body>

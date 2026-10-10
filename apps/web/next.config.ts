@@ -23,6 +23,9 @@ const nextConfig: NextConfig = {
   // overwriting the regular build output.
   distDir: process.env.NEXT_DIST_DIR || '.next',
   poweredByHeader: false,
+  // Dev only: lets a phone on the same Wi-Fi load the dev server by this computer's local IP
+  // (see "Open it on your phone" in docs/USER_GUIDE.md). Private network ranges only.
+  allowedDevOrigins: ['192.168.*.*', '10.*.*.*'],
   // Workspace packages ship TypeScript source.
   transpilePackages: ['@bc/shared'],
   images: {

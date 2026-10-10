@@ -73,8 +73,7 @@ test('X: connecting imports your bookmarks, then new saves sync live', async ({
   // Allows for one reload by the check-in safety net (15 s) on a slow run.
   await expect(page.getByText('2 posts synced')).toBeVisible({ timeout: 45_000 });
 
-  await page.goto('/inbox');
-  await page.getByLabel('Filter by platform').selectOption('x');
+  await page.goto('/inbox?source=x');
   const reply = page.getByRole('article').filter({ hasText: 'Thanks, found the original thread' });
   await expect(reply).toContainText('charan (@xpcharan)');
   await expect(reply.getByRole('link')).toHaveAttribute(

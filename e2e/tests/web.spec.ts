@@ -8,17 +8,19 @@ test('signed-out visitors are sent to the login page', async ({ page }) => {
 
 test('save a link, detect a duplicate, and triage it', async ({ page }) => {
   await signIn(page, 'web-triage@example.com');
-  const linkInput = page.getByLabel('Link to save');
+  // One box searches and saves: a pasted link offers Save link.
+  const box = page.getByLabel('Search or paste a link');
   const cards = page.getByRole('article');
+  const views = page.getByRole('navigation', { name: 'Views' });
 
-  await linkInput.fill('example.com/e2e-article?utm_source=newsletter');
-  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await box.fill('example.com/e2e-article?utm_source=newsletter');
+  await page.getByRole('button', { name: 'Save link' }).click();
   await expect(cards).toHaveCount(1);
   // Tracking parameters are stripped from the stored link.
   await expect(cards.getByRole('link')).toHaveAttribute('href', 'https://example.com/e2e-article');
 
-  await linkInput.fill('https://www.example.com/e2e-article/');
-  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await box.fill('https://www.example.com/e2e-article/');
+  await page.getByRole('button', { name: 'Save link' }).click();
   await expect(page.getByText('You already saved this link.')).toBeVisible();
   await expect(cards).toHaveCount(1);
 
@@ -26,11 +28,11 @@ test('save a link, detect a duplicate, and triage it', async ({ page }) => {
   await expect(cards).toHaveCount(0);
   await expect(page.getByText('Your inbox is clear')).toBeVisible();
 
-  await page.getByRole('tab', { name: 'Done' }).click();
+  await views.getByRole('link', { name: /^Done/ }).click();
   await expect(cards).toHaveCount(1);
   await cards.getByRole('button', { name: /Back to inbox/ }).click();
   await expect(cards).toHaveCount(0);
-  await page.getByRole('tab', { name: 'Inbox' }).click();
+  await views.getByRole('link', { name: /^Inbox/ }).click();
   await expect(cards).toHaveCount(1);
 });
 
@@ -56,7 +58,7 @@ test('import a bookmarks.html export and search it', async ({ page }) => {
   await expect(page.getByRole('article')).toHaveCount(2);
   await expect(page.getByRole('article').first()).toContainText('Reading');
 
-  await page.getByLabel('Search bookmarks').fill('rust');
+  await page.getByLabel('Search or paste a link').fill('rust');
   await expect(page.getByRole('article')).toHaveCount(1);
   await expect(page.getByRole('link', { name: 'Rust ownership guide' })).toBeVisible();
 });

@@ -1,7 +1,9 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { KeyRound } from 'lucide-react';
 import { useState } from 'react';
+import { PlatformLogo } from '@/components/ui/platform-logo';
 import { buttonDanger, buttonGhost, hint, panel } from '@/components/ui/styles';
 import { listApiTokens, queryKeys, revokeApiToken } from '@/lib/api/bookmarks';
 import { formatRelativeTime } from '@/lib/format';
@@ -25,7 +27,7 @@ export function ConnectedDevices() {
   }
   if (tokens.data.length === 0) {
     return (
-      <p className="rounded-xl border border-dashed border-rule-strong px-4 py-6 text-center text-sm text-ink-soft">
+      <p className="rounded-2xl border border-dashed border-rule-strong bg-surface/60 px-5 py-8 text-center text-sm text-ink-soft">
         No devices connected.
       </p>
     );
@@ -34,14 +36,18 @@ export function ConnectedDevices() {
   return (
     <ul className={`${panel} divide-y divide-rule`}>
       {tokens.data.map((token) => (
-        <li
-          key={token.id}
-          className="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5"
-        >
-          <div className="min-w-0">
+        <li key={token.id} className="flex flex-wrap items-center gap-4 px-5 py-4">
+          {/chrome/i.test(token.name) ? (
+            <PlatformLogo platform="browser" size={36} />
+          ) : (
+            <span className="grid size-9 place-items-center rounded-[10px] bg-sunken text-ink-soft">
+              <KeyRound size={17} aria-hidden />
+            </span>
+          )}
+          <div className="min-w-[12rem] flex-1">
             <p className="text-sm font-semibold">{token.name}</p>
-            <p className="mt-0.5 flex flex-wrap gap-x-3 text-[13px] text-ink-soft">
-              <code className="rounded bg-sunken px-1 text-xs">{token.preview}…</code>
+            <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px] text-ink-soft">
+              <code className="rounded-md bg-sunken px-1.5 py-px text-xs">{token.preview}…</code>
               <span>Connected {formatRelativeTime(token.createdAt)}</span>
               <span>
                 {token.lastUsedAt

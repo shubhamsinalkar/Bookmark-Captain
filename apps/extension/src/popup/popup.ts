@@ -1,10 +1,18 @@
-import { type PlatformSyncStatus, platformForHost } from '@bc/shared/constants';
+import {
+  isKnownPlatform,
+  type Platform,
+  type PlatformSyncStatus,
+  platformForHost,
+} from '@bc/shared/constants';
+import { PLATFORM_LOGOS } from '@bc/shared/logos';
 import { CONNECT_PAGE_URL, WEB_URL } from '../config';
 import { type RuntimeRequest, sendToBackground, type SyncStatus } from '../messages';
 
 const app = document.getElementById('app')!;
+const topActions = document.getElementById('top-actions')!;
 const numberFormat = new Intl.NumberFormat('en');
 const relativeTime = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+const SVG_NS = 'http://www.w3.org/2000/svg';
 
 function timeAgo(iso: string): string {
   const minutes = Math.round((Date.parse(iso) - Date.now()) / 60_000);
@@ -27,6 +35,45 @@ function el<K extends keyof HTMLElementTagNameMap>(
   if (props.onClick) node.addEventListener('click', props.onClick);
   node.append(...children);
   return node;
+}
+
+/** A platform's logo tile (the same drawing as the web app), or the site's icon for others. */
+function logo(platform: Platform, size = 28): HTMLElement {
+  const tile = el('span', { className: 'logo' });
+  tile.setAttribute('aria-hidden', 'true');
+  tile.style.width = `${size}px`;
+  tile.style.height = `${size}px`;
+  tile.style.borderRadius = `${Math.round(size * 0.28)}px`;
+
+  const art = isKnownPlatform(platform) ? PLATFORM_LOGOS[platform] : undefined;
+  if (art) {
+    if (art.tile) {
+      tile.classList.add('brand-tile');
+      tile.style.background = art.tile;
+    }
+    const glyph = String(Math.round(size * art.scale));
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('width', glyph);
+    svg.setAttribute('height', glyph);
+    for (const shape of art.shapes) {
+      const path = document.createElementNS(SVG_NS, 'path');
+      path.setAttribute('d', shape.d);
+      path.setAttribute('fill', shape.fill);
+      svg.append(path);
+    }
+    tile.append(svg);
+    return tile;
+  }
+
+  const icon = document.createElement('img');
+  icon.src = `https://www.google.com/s2/favicons?${new URLSearchParams({ domain: platform, sz: '64' }).toString()}`;
+  icon.width = Math.round(size * 0.62);
+  icon.height = icon.width;
+  icon.alt = '';
+  icon.referrerPolicy = 'no-referrer';
+  tile.append(icon);
+  return tile;
 }
 
 function openTab(url: string) {
@@ -60,7 +107,7 @@ function syncSummary(status: SyncStatus): string {
       ? `, ${numberFormat.format(status.pendingChanges)} waiting to sync`
       : '';
   return status.lastSyncAt
-    ? `Last synced ${timeAgo(status.lastSyncAt)}${pending}`
+    ? `Synced ${timeAgo(status.lastSyncAt)}${pending}`
     : `Not synced yet${pending}`;
 }
 
@@ -80,24 +127,33 @@ function platformRow(platform: PlatformSyncStatus): HTMLElement {
           platform: id,
           mode: 'catch-up',
         }),
-        actionButton(
-          'Disconnect',
-          'Disconnecting…',
-          { type: 'platform:disconnect', platform: id },
-          'link',
-        ),
       ]
     : [actionButton(`Connect ${label}`, 'Opening…', { type: 'platform:connect', platform: id })];
 
   return el(
     'li',
-    { className: 'platform' },
+    { className: 'row' },
+    logo(id),
     el(
       'div',
       {},
       el('strong', { text: label }),
-      el('p', { className: 'muted', text: platformSummary(platform) }),
-      ...(platform.lastError ? [el('p', { className: 'error', text: platform.lastError })] : []),
+      platform.lastError
+        ? el('span', { className: 'error', text: platform.lastError })
+        : el('span', {
+            className: platform.enabled ? 'ok' : 'muted',
+            text: platformSummary(platform),
+          }),
+      ...(platform.enabled
+        ? [
+            actionButton(
+              'Disconnect',
+              'Disconnecting…',
+              { type: 'platform:disconnect', platform: id },
+              'link small',
+            ),
+          ]
+        : []),
     ),
     el('div', { className: 'row-actions' }, ...actions),
   );
@@ -131,10 +187,9 @@ function siteSection(tab: chrome.tabs.Tab | undefined, status: SyncStatus): HTML
   const tabId = tab.id;
   const pageUrl = tab.url;
   const message = el('p', {
-    className: 'muted',
     text: `Open the page that lists your saved posts on ${url.hostname.replace(/^www\./, '')}, then:`,
   });
-  const button = el('button', { className: 'primary', text: 'Sync this list' });
+  const button = el('button', { className: 'accent', text: 'Sync this list' });
   button.addEventListener('click', () => {
     button.disabled = true;
     button.textContent = 'Asking for access…';
@@ -157,22 +212,30 @@ function siteSection(tab: chrome.tabs.Tab | undefined, status: SyncStatus): HTML
         button.textContent = 'Sync this list';
       });
   });
-  return [el('h2', { text: 'This site' }), message, el('div', { className: 'actions' }, button)];
+  return [el('div', { className: 'site' }, logo(platform, 24), message, button)];
 }
 
 async function render(): Promise<void> {
   const [status, tab] = await Promise.all([sendToBackground({ type: 'getStatus' }), currentTab()]);
   app.replaceChildren();
+  topActions.replaceChildren();
 
   if (!status.connected) {
     app.append(
-      el('p', { text: 'Connect your account to sync your bookmarks into your inbox.' }),
-      ...(status.lastError ? [el('p', { className: 'error', text: status.lastError })] : []),
       el(
         'div',
-        { className: 'actions' },
+        { className: 'empty' },
+        el(
+          'div',
+          { className: 'logo-row' },
+          ...(['browser', 'x', 'reddit', 'instagram', 'youtube'] as const).map((id) =>
+            logo(id, 30),
+          ),
+        ),
+        el('p', { text: 'Connect your account to sync your bookmarks into your inbox.' }),
+        ...(status.lastError ? [el('p', { className: 'error', text: status.lastError })] : []),
         el('button', {
-          className: 'primary',
+          className: 'primary wide',
           text: 'Connect account',
           onClick: () => openTab(CONNECT_PAGE_URL),
         }),
@@ -181,22 +244,52 @@ async function render(): Promise<void> {
     return;
   }
 
+  topActions.append(
+    el('button', {
+      className: 'primary',
+      text: 'Open inbox',
+      onClick: () => openTab(new URL('/inbox', WEB_URL).toString()),
+    }),
+  );
+
+  const syncAll = actionButton('Sync', 'Syncing…', { type: 'syncNow' });
+  syncAll.title = 'Sync all bookmarks now';
+
   app.append(
-    el('p', { className: 'ok', text: '● Connected' }),
-    el('p', { className: 'muted', text: `Browser bookmarks: ${syncSummary(status)}` }),
-    ...(status.lastError ? [el('p', { className: 'error', text: status.lastError })] : []),
-    ...siteSection(tab, status),
-    el('h2', { text: 'Platforms' }),
-    el('ul', { className: 'platforms' }, ...status.platforms.map(platformRow)),
     el(
       'div',
-      { className: 'actions' },
+      { className: 'status' },
+      logo('browser', 32),
+      el(
+        'div',
+        {},
+        el('strong', { text: 'Browser bookmarks' }),
+        el(
+          'p',
+          { className: 'muted' },
+          el(
+            'span',
+            { className: 'ok' },
+            el('span', { className: 'dot' }),
+            el('span', { text: 'Connected' }),
+          ),
+          el('span', { text: `. ${syncSummary(status)}` }),
+        ),
+        ...(status.lastError ? [el('p', { className: 'error', text: status.lastError })] : []),
+      ),
+      syncAll,
+    ),
+    ...siteSection(tab, status),
+    el('h2', { text: 'Platforms' }),
+    el('ul', { className: 'rows' }, ...status.platforms.map(platformRow)),
+    el(
+      'div',
+      { className: 'footer' },
       el('button', {
-        className: 'primary',
-        text: 'Open inbox',
-        onClick: () => openTab(new URL('/inbox', WEB_URL).toString()),
+        className: 'link',
+        text: 'Settings',
+        onClick: () => openTab(new URL('/settings', WEB_URL).toString()),
       }),
-      actionButton('Sync all bookmarks now', 'Syncing…', { type: 'syncNow' }),
       actionButton('Disconnect this browser', 'Disconnecting…', { type: 'disconnect' }, 'link'),
     ),
   );

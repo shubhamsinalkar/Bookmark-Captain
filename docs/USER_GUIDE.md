@@ -36,6 +36,31 @@ extension (the popup shows "N waiting to sync") and are sent when it is back.
 Open **http://localhost:3000** and sign in (locally: **Development sign-in** with any email,
 no password).
 
+### Open it on your phone (same Wi-Fi)
+
+`localhost` only works on the computer itself. To use the app from a phone on the same Wi-Fi,
+start the API and website with the computer's network address instead of `pnpm dev`:
+
+1. Find the computer's address: `ipconfig` → **IPv4 Address**, e.g. `192.168.29.227`.
+2. In two terminals (PowerShell), replacing the address with yours:
+
+   ```powershell
+   $env:WEB_URL = 'http://192.168.29.227:3000'; pnpm --filter @bc/api dev
+   ```
+
+   ```powershell
+   $env:NEXT_PUBLIC_API_URL = 'http://192.168.29.227:4000'; pnpm --filter @bc/web dev
+   ```
+
+3. On the phone **and** on the computer, open **http://192.168.29.227:3000** and sign in with
+   the same email as usual. `localhost:3000` doesn't work while it runs this way, and the
+   Settings page can't see the extension (syncing itself keeps working).
+
+When you're done, stop both and go back to `pnpm dev`. While it runs this way, anyone on the
+same Wi-Fi who opens that address can use Development sign-in, which has no password: only do
+this on a network you trust. If the phone can't connect, allow Node.js through Windows
+Firewall when Windows asks.
+
 ### 1.3 Install the extension
 
 1. Open `chrome://extensions` in Chrome.
@@ -48,7 +73,8 @@ no password).
 1. Click the Bookmark Captain icon → **Connect account**.
 2. On the page that opens, click **Connect extension**.
 3. You should see **"Connected. Your browser bookmarks are being imported now."**
-4. The popup now shows **● Connected**. Your Chrome bookmarks start arriving in the inbox.
+4. The popup now shows **Browser bookmarks: Connected** with a green dot. Your Chrome bookmarks
+   start arriving in the inbox.
 
 ### 1.5 Turn on AI summaries (optional)
 
@@ -127,7 +153,7 @@ closed come in at the first check after you open it.
 
 ## 4. Using the inbox
 
-### Views (tabs at the top)
+### Views and sources (left sidebar; on a phone, the chips under the top bar)
 
 | View         | Shows                                                        |
 | ------------ | ------------------------------------------------------------ |
@@ -137,16 +163,34 @@ closed come in at the first check after you open it.
 | **Archived** | Items you want to keep out of the way                        |
 | **All**      | Everything                                                   |
 
-A dot marks **unread** items; it disappears when you open the link.
+The number next to each view is how many items it holds; the Inbox number turns colourful while
+something is unread. Under **Sources**, click a platform (with its logo) to see only its items,
+and **Every source** to see them all again. The address bar keeps your choice
+(e.g. `/inbox?view=done&source=x`), so Back works and you can bookmark a view.
 
-### Actions on an item (hover over it, or tap on a phone)
+Each item shows its platform's logo (X, Reddit, Instagram, YouTube…) or, for links, the
+website's own icon, plus the post's picture when it has one (YouTube thumbnails, GitHub
+repository cards, images from posts). A dot before the title marks **unread** items; it
+disappears when you open the link.
 
-- **Done** — finished with it.
-- **Snooze** → **Tomorrow morning / In 3 days / Next week** — hides it until 9:00 that day.
+**Cards or list:** the two buttons next to **Import** switch between picture cards and a compact
+list. Your choice is remembered in this browser.
+
+### Actions on an item (hover over it; on a phone they are always shown)
+
+- **✓ Done** — finished with it.
+- **⏰ Snooze** → **Tomorrow morning / In 3 days / Next week** — hides it until 9:00 that day.
   **Unsnooze** brings it back now.
 - **Archive** — keep it, but out of the inbox.
 - **Back to inbox** — undo Done/Archive.
-- **Delete** → **Confirm delete** — removes it from Bookmark Captain.
+- **⋯ More** → **Open in a new tab**, **Copy link**, or **Delete…** → **Delete for good** —
+  removes it from Bookmark Captain.
+
+After Done, Snooze or Archive, a message at the bottom offers **Undo** for a few seconds.
+
+**Keyboard:** **J** / **K** move between items, **Enter** opens the selected one, **E** marks it
+done, **S** snoozes, **A** archives, **Z** undoes the last action, **/** jumps to the search box
+and **Esc** clears the selection.
 
 > **Tip:** for posts from X, Reddit, Instagram or YouTube, prefer **Done** or **Archive**. If a
 > post is still saved on the site, **Delete** only removes it here, and the next sync may bring
@@ -165,7 +209,8 @@ A dot marks **unread** items; it disappears when you open the link.
 
 ### Finding things
 
-- **Search** box: searches titles, links, authors, and the AI headlines, summaries and topics.
+- **Search** box ("Search your saves, or paste a link"): searches titles, links, authors, and
+  the AI headlines, summaries and topics.
 - **Related by meaning** (needs `VOYAGE_API_KEY`, see 1.5): below the word matches, bookmarks
   about the **same idea in other words**, e.g. "feeling stuck and unmotivated" finds motivation
   reels that never use those words. It also helps with typos and Hindi/English mixes. If nothing
@@ -176,12 +221,13 @@ A dot marks **unread** items; it disappears when you open the link.
   - Keeps working when summaries are switched off (only `VOYAGE_API_KEY` needed).
   - "Search by meaning is busy": Voyage's free limit (3 searches a minute without a card on
     file) was reached; wait a minute.
-- **All platforms** dropdown: show only one source (X, Reddit, a website…).
+- **Sources** in the sidebar: show only one source (X, Reddit, a website…).
 
 ### Adding things by hand
 
-- **Paste a link** into the "Link to save" box → **Save**.
-- **Import bookmarks.html**: upload a bookmarks export from Chrome, Firefox, Safari or Edge.
+- **Paste a link** into the search box → **Save link** (or press Enter). Text that looks like a
+  web address (`example.com/page`, `https://…`) is offered for saving instead of searched.
+- **Import**: upload a bookmarks.html export from Chrome, Firefox, Safari or Edge.
   Duplicates are merged, and tracking tags (like `utm_source`) are removed from links.
 
 ---

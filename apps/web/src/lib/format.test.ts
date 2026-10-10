@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { displayHost, displayUrl, formatRelativeTime, morningInDays, snippetFor } from './format';
+import {
+  displayHost,
+  displayUrl,
+  formatAge,
+  formatRelativeTime,
+  morningInDays,
+  snippetFor,
+} from './format';
 
 describe('formatRelativeTime', () => {
   const now = new Date('2026-03-10T12:00:00Z');
@@ -12,6 +19,24 @@ describe('formatRelativeTime', () => {
     ['2026-03-10T15:00:00Z', 'in 3 hours'],
   ])('formats %s as "%s"', (date, expected) => {
     expect(formatRelativeTime(date, now)).toBe(expected);
+  });
+});
+
+describe('formatAge', () => {
+  const now = new Date('2026-03-10T12:00:00Z');
+
+  it.each([
+    ['2026-03-10T11:59:30Z', 'now'],
+    ['2026-03-10T11:55:00Z', '5m'],
+    ['2026-03-10T09:00:00Z', '3h'],
+    ['2026-03-08T12:00:00Z', '2d'],
+    ['2026-02-24T12:00:00Z', '2w'],
+    ['2025-11-01T12:00:00Z', '4mo'],
+    ['2024-03-01T12:00:00Z', '2y'],
+    // Clock skew: a date slightly in the future still reads as now.
+    ['2026-03-10T12:00:30Z', 'now'],
+  ])('formats %s as "%s"', (date, expected) => {
+    expect(formatAge(date, now)).toBe(expected);
   });
 });
 

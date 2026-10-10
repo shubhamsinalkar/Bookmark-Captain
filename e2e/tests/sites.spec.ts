@@ -125,8 +125,7 @@ test('any site: taught from its saved page, confirmed from a preview, then synce
   await expect(site.getByText('Knife sharpening, properly').last()).toBeVisible();
   await site.getByRole('button', { name: 'Looks right' }).click();
 
-  await app.goto('/inbox');
-  await app.getByLabel('Filter by platform').selectOption('savedstuff.test');
+  await app.goto('/inbox?source=savedstuff.test');
   await expect(app.getByRole('article')).toHaveCount(5);
   const knife = app.getByRole('article').filter({ hasText: 'Knife sharpening, properly' });
   await expect(knife).toContainText('Anna (@chef_anna)');

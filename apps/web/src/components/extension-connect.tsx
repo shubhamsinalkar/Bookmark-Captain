@@ -1,14 +1,16 @@
 'use client';
 
 import { useQueryClient } from '@tanstack/react-query';
+import { CircleCheck, LoaderCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { SignalFlag } from '@/components/ui/signal-flag';
-import { buttonPrimary, buttonSecondary, hint, panel } from '@/components/ui/styles';
+import { BrandMark } from '@/components/ui/brand';
+import { PlatformLogo } from '@/components/ui/platform-logo';
+import { buttonPrimary, buttonSecondary, hint, pageTitle, panel } from '@/components/ui/styles';
 import { createApiToken, queryKeys, revokeApiToken } from '@/lib/api/bookmarks';
 import { askExtension, postToExtension, waitForExtension } from '@/lib/extension-bridge';
 
-const code = 'rounded bg-sunken px-1 py-0.5 text-[13px] text-ink';
+const code = 'rounded-md bg-sunken px-1.5 py-0.5 text-[13px] text-ink';
 
 const DETECT_TIMEOUT_MS = 3000;
 const CONNECT_TIMEOUT_MS = 8000;
@@ -78,16 +80,36 @@ export function ExtensionConnect() {
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-6">
-      <div className="flex items-center gap-3">
-        <SignalFlag platform="browser" size={28} decorative />
-        <h1 className="text-2xl font-bold tracking-tight font-stretch-112%">
-          Connect the Chrome extension
-        </h1>
+    <div className="mx-auto max-w-xl py-4 sm:py-10">
+      <div className="flex items-center justify-center gap-3" aria-hidden>
+        <span className="rounded-2xl bg-surface p-2 shadow-lift ring-1 ring-rule">
+          <PlatformLogo platform="browser" size={44} />
+        </span>
+        <span className="flex gap-1">
+          {[0, 1, 2].map((dot) => (
+            <span
+              key={dot}
+              className={`size-1.5 rounded-full ${state.phase === 'connected' ? 'bg-good' : 'bg-rule-strong'}`}
+            />
+          ))}
+        </span>
+        <span className="rounded-2xl bg-surface p-2 shadow-lift ring-1 ring-rule">
+          <BrandMark size={44} />
+        </span>
       </div>
+      <h1 className={`${pageTitle} mt-7 text-center`}>Connect the Chrome extension</h1>
+      <p className={`${hint} mx-auto mt-2 max-w-md text-center`}>
+        It imports your browser bookmarks, keeps them in sync, and reads the saved lists of X,
+        Reddit, Instagram, YouTube and other sites.
+      </p>
 
-      <section className={`${panel} space-y-4 p-6`} aria-live="polite">
-        {state.phase === 'detecting' && <p className={hint}>Looking for the extension…</p>}
+      <section className={`${panel} mt-8 space-y-5 p-6 sm:p-7`} aria-live="polite">
+        {state.phase === 'detecting' && (
+          <p className={`${hint} inline-flex items-center gap-2`}>
+            <LoaderCircle size={15} className="animate-spin" aria-hidden />
+            Looking for the extension…
+          </p>
+        )}
 
         {state.phase === 'missing' && (
           <>
@@ -95,7 +117,7 @@ export function ExtensionConnect() {
               The Bookmark Captain extension isn&apos;t installed in this browser (or this page was
               open before it was installed).
             </p>
-            <ol className="space-y-2.5 text-sm">
+            <ol className="space-y-3 text-sm">
               {[
                 <>
                   Build it: <code className={code}>pnpm --filter @bc/extension build</code>
@@ -111,7 +133,7 @@ export function ExtensionConnect() {
                 <>Come back to this page and check again.</>,
               ].map((step, index) => (
                 <li key={index} className="flex gap-3">
-                  <span className="flex size-5.5 shrink-0 items-center justify-center rounded-full border border-rule-strong text-xs font-semibold">
+                  <span className="grid size-6 shrink-0 place-items-center rounded-full bg-sunken text-xs font-semibold">
                     {index + 1}
                   </span>
                   <span className="pt-0.5 text-ink-soft">{step}</span>
@@ -131,20 +153,30 @@ export function ExtensionConnect() {
                 ? 'The extension is already connected. Reconnecting replaces its access key.'
                 : 'Extension found. Connect it to your account to start syncing bookmarks.'}
             </p>
-            <button type="button" onClick={() => void connect()} className={buttonPrimary}>
+            <button
+              type="button"
+              onClick={() => void connect()}
+              className={`${buttonPrimary} w-full py-2.5`}
+            >
               {state.alreadyConnected ? 'Reconnect extension' : 'Connect extension'}
             </button>
           </>
         )}
 
-        {state.phase === 'connecting' && <p className={hint}>Connecting…</p>}
+        {state.phase === 'connecting' && (
+          <p className={`${hint} inline-flex items-center gap-2`}>
+            <LoaderCircle size={15} className="animate-spin" aria-hidden />
+            Connecting…
+          </p>
+        )}
 
         {state.phase === 'connected' && (
           <>
-            <p className="text-sm font-semibold text-good">
+            <p className="flex items-start gap-2.5 text-sm font-semibold text-good">
+              <CircleCheck size={18} className="mt-px shrink-0" aria-hidden />
               Connected. Your browser bookmarks are being imported now.
             </p>
-            <Link href="/inbox" className={buttonPrimary}>
+            <Link href="/inbox" className={`${buttonPrimary} w-full py-2.5`}>
               Go to inbox
             </Link>
           </>

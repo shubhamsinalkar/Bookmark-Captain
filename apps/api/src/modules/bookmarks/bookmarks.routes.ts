@@ -75,6 +75,10 @@ export function createBookmarksRouter(ctx: AppContext): Router {
     res.json({ sources: await bookmarks.sources(getAuthUser(req).id) });
   });
 
+  router.get('/counts', async (req, res) => {
+    res.json(await bookmarks.counts(getAuthUser(req).id));
+  });
+
   router.post('/', async (req, res) => {
     const input = createBookmarkRequestSchema.parse(req.body);
     const { bookmark, created } = await bookmarks.create(getAuthUser(req).id, input);

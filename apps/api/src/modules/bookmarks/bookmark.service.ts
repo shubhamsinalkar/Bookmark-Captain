@@ -1,6 +1,7 @@
 import { type BookmarkRow, bookmarks, type Database, type NewBookmarkRow } from '@bc/db';
 import {
   type Bookmark,
+  type BookmarkCounts,
   type BookmarkSource,
   type BookmarkView,
   type ContentType,
@@ -288,6 +289,25 @@ export function createBookmarkService(db: Database, events: EventBus) {
         .groupBy(bookmarks.platform)
         .orderBy(desc(sql`count(*)`), bookmarks.platform);
       return rows;
+    },
+
+    /** How many bookmarks each view shows, with the same rules as `list`. */
+    async counts(userId: string): Promise<BookmarkCounts> {
+      const now = new Date();
+      const countWhere = (condition: SQL | undefined) =>
+        sql<number>`(count(*) filter (where ${condition ?? sql`true`}))::int`;
+      const [row] = await db
+        .select({
+          inbox: countWhere(viewCondition('inbox', now)),
+          unread: countWhere(and(viewCondition('inbox', now), eq(bookmarks.status, 'unread'))),
+          snoozed: countWhere(viewCondition('snoozed', now)),
+          done: countWhere(viewCondition('done', now)),
+          archived: countWhere(viewCondition('archived', now)),
+          all: sql<number>`count(*)::int`,
+        })
+        .from(bookmarks)
+        .where(eq(bookmarks.userId, userId));
+      return row!;
     },
 
     async list(

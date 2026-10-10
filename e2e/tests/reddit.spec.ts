@@ -93,8 +93,7 @@ test('Reddit: connecting imports your saved list, then new saves sync live', asy
   await page.getByRole('button', { name: 'Connect Reddit' }).click();
   await expect(page.getByText('3 posts synced')).toBeVisible({ timeout: 45_000 });
 
-  await page.goto('/inbox');
-  await page.getByLabel('Filter by platform').selectOption('reddit');
+  await page.goto('/inbox?source=reddit');
   await expect(page.getByRole('article')).toHaveCount(3);
   const laidOff = page.getByRole('article').filter({ hasText: 'Got laid off on bday' });
   await expect(laidOff).toContainText('u/mriidicc');

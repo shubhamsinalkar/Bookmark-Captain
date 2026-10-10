@@ -123,8 +123,7 @@ test('YouTube: connecting imports Watch later, then changes sync live and on eve
   await page.getByRole('button', { name: 'Connect YouTube' }).click();
   await expect(page.getByText('3 posts synced')).toBeVisible({ timeout: 45_000 });
 
-  await page.goto('/inbox');
-  await page.getByLabel('Filter by platform').selectOption('youtube');
+  await page.goto('/inbox?source=youtube');
   await expect(page.getByRole('article')).toHaveCount(3);
   const rust = page.getByRole('article').filter({ hasText: 'Rust in 100 seconds' });
   await expect(rust).toContainText('Fireship');
@@ -157,8 +156,7 @@ test('YouTube: connecting imports Watch later, then changes sync live and on eve
   await page.goto('/settings');
   await page.getByRole('button', { name: 'Sync now' }).click();
   await expect(page.getByText('2 posts synced')).toBeVisible({ timeout: 45_000 });
-  await page.goto('/inbox');
-  await page.getByLabel('Filter by platform').selectOption('youtube');
+  await page.goto('/inbox?source=youtube');
   await expect(page.getByRole('article')).toHaveCount(2);
   await expect(page.getByRole('link', { name: 'I tried every web framework' })).toHaveCount(0);
 

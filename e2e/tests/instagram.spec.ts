@@ -95,8 +95,7 @@ test('Instagram: connecting imports your saved posts, then new saves sync live',
   await page.getByRole('button', { name: 'Connect Instagram' }).click();
   await expect(page.getByText('3 posts synced')).toBeVisible({ timeout: 45_000 });
 
-  await page.goto('/inbox');
-  await page.getByLabel('Filter by platform').selectOption('instagram');
+  await page.goto('/inbox?source=instagram');
   await expect(page.getByRole('article')).toHaveCount(3);
   const haul = page.getByRole('article').filter({ hasText: 'Sunday market haul' });
   await expect(haul).toContainText('Anna (@chef_anna)');

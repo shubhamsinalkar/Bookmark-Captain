@@ -13,6 +13,7 @@
   "dependencies": {
     "@bc/shared": "workspace:^",
     "@tanstack/react-query": "^5.104.0",
+    "lucide-react": "^1.55.0",
     "next": "^16.3.7",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",

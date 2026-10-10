@@ -1,11 +1,21 @@
 import type { Metadata, Viewport } from 'next';
-import { Archivo } from 'next/font/google';
+import { Instrument_Sans, Instrument_Serif } from 'next/font/google';
 import type { ReactNode } from 'react';
 import { Providers } from './providers';
 import './globals.css';
 
-// One family throughout; its width axis does the work of a display face (see `font-stretch-*`).
-const archivo = Archivo({ subsets: ['latin'], axes: ['wdth'], variable: '--font-archivo' });
+// Instrument Sans for the interface; its serif sibling only for display headlines.
+const instrumentSans = Instrument_Sans({
+  subsets: ['latin'],
+  axes: ['wdth'],
+  variable: '--font-instrument-sans',
+});
+const instrumentSerif = Instrument_Serif({
+  subsets: ['latin'],
+  weight: '400',
+  style: ['normal', 'italic'],
+  variable: '--font-instrument-serif',
+});
 
 export const metadata: Metadata = {
   title: { default: 'Bookmark Captain', template: '%s · Bookmark Captain' },
@@ -14,14 +24,14 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#eef2f3' },
-    { media: '(prefers-color-scheme: dark)', color: '#0a1822' },
+    { media: '(prefers-color-scheme: light)', color: '#f6f7f9' },
+    { media: '(prefers-color-scheme: dark)', color: '#0b0e13' },
   ],
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={archivo.variable}>
+    <html lang="en" className={`${instrumentSans.variable} ${instrumentSerif.variable}`}>
       <body className="min-h-dvh font-sans">
         <Providers>{children}</Providers>
       </body>

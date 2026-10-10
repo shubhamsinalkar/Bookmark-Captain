@@ -20,6 +20,24 @@ export function formatRelativeTime(date: Date | string, now: Date = new Date()):
   return 'just now';
 }
 
+const AGE_UNITS: [string, number][] = [
+  ['y', 365 * 24 * 60 * 60],
+  ['mo', 30 * 24 * 60 * 60],
+  ['w', 7 * 24 * 60 * 60],
+  ['d', 24 * 60 * 60],
+  ['h', 60 * 60],
+  ['m', 60],
+];
+
+/** Compact age for tight spaces: "now", "5m", "3h", "2d", "2w", "4mo", "1y". */
+export function formatAge(date: Date | string, now: Date = new Date()): string {
+  const seconds = Math.max(0, (now.getTime() - new Date(date).getTime()) / 1000);
+  for (const [unit, unitSeconds] of AGE_UNITS) {
+    if (seconds >= unitSeconds) return `${Math.floor(seconds / unitSeconds)}${unit}`;
+  }
+  return 'now';
+}
+
 /** Hostname without `www.`, for compact display. Falls back to the raw input. */
 export function displayHost(url: string): string {
   try {

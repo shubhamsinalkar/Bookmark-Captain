@@ -253,6 +253,34 @@ describe('GET /bookmarks', () => {
     expect(await titles('all')).toHaveLength(5);
   });
 
+  it('counts each view with the same rules', async () => {
+    const { agent } = await signIn(app);
+    const [first, second, third, fourth] = (await seed(agent)) as [
+      Bookmark,
+      Bookmark,
+      Bookmark,
+      Bookmark,
+    ];
+    await agent.patch(`/bookmarks/${first.id}`).send({ status: 'done' }).expect(200);
+    await agent.patch(`/bookmarks/${second.id}`).send({ status: 'archived' }).expect(200);
+    const tomorrow = new Date(Date.now() + 86_400_000).toISOString();
+    await agent.patch(`/bookmarks/${third.id}`).send({ snoozeUntil: tomorrow }).expect(200);
+    await agent.patch(`/bookmarks/${fourth.id}`).send({ status: 'opened' }).expect(200);
+
+    const { body } = await agent.get('/bookmarks/counts').expect(200);
+    expect(body).toEqual({ inbox: 2, unread: 1, snoozed: 1, done: 1, archived: 1, all: 5 });
+
+    const { agent: other } = await signIn(app, 'other@example.com');
+    expect((await other.get('/bookmarks/counts').expect(200)).body).toEqual({
+      inbox: 0,
+      unread: 0,
+      snoozed: 0,
+      done: 0,
+      archived: 0,
+      all: 0,
+    });
+  });
+
   it('filters by platform and search text', async () => {
     const { agent } = await signIn(app);
     await seed(agent);

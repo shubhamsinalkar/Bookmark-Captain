@@ -2,13 +2,16 @@
 :root {
   color-scheme: light dark;
   --bg: #ffffff;
-  --fg: #0f2a3d;
-  --muted: #52677a;
-  --border: #d3dce0;
-  --primary-bg: #0f2a3d;
-  --primary-fg: #eef2f3;
-  --error: #b3261e;
-  --ok: #1d6b45;
+  --sunken: #f0f2f5;
+  --fg: #0f1729;
+  --muted: #5e6878;
+  --border: #e5e8ed;
+  --border-strong: #d2d7df;
+  --accent: #a3207f;
+  --accent-wash: #fbeaf5;
+  --error: #c62828;
+  --ok: #18794e;
+  --shadow: 0 1px 2px rgb(15 23 41 / 0.05), 0 1px 3px rgb(15 23 41 / 0.06);
   font-family:
     ui-sans-serif,
     system-ui,
@@ -17,121 +20,240 @@
     Roboto,
     sans-serif;
   font-size: 14px;
+  -webkit-font-smoothing: antialiased;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #10222f;
-    --fg: #e4ecf0;
-    --muted: #93a7b4;
-    --border: #1e3442;
-    --primary-bg: #e4ecf0;
-    --primary-fg: #0a1822;
+    --bg: #12161d;
+    --sunken: #1a1f28;
+    --fg: #e9edf3;
+    --muted: #9ba4b3;
+    --border: #232934;
+    --border-strong: #323a47;
+    --accent: #f08bd3;
+    --accent-wash: #33152c;
     --error: #ff8a80;
     --ok: #6fd3a0;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.3);
   }
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  width: 320px;
-  padding: 16px;
+  width: 340px;
   background: var(--bg);
   color: var(--fg);
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 14px 12px;
+  border-bottom: 1px solid var(--border);
 }
 
 h1 {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 0 0 12px;
-  font-size: 15px;
-  font-weight: 700;
+  gap: 9px;
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
 }
 
-h1::before {
-  content: '';
-  width: 10px;
-  height: 14px;
-  background: #d0202e;
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 72%, 0 100%);
+.brand {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, #c8358f, #5b1488);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25);
 }
 
 h2 {
-  margin: 16px 0 8px;
-  font-size: 13px;
+  margin: 0;
+  padding: 14px 14px 6px;
+  font-size: 12px;
   font-weight: 600;
+  color: var(--muted);
 }
 
 p {
-  margin: 0 0 10px;
-  line-height: 1.4;
+  margin: 0;
+  line-height: 1.45;
+}
+
+.pad {
+  padding: 14px;
 }
 
 .muted {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12.5px;
 }
 
 .error {
   color: var(--error);
-  font-size: 13px;
+  font-size: 12.5px;
 }
 
 .ok {
   color: var(--ok);
 }
 
-.platforms {
+/* A platform logo tile, drawn from shared SVG data. */
+.logo {
+  position: relative;
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 7px;
+  box-shadow: inset 0 0 0 1px var(--border);
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.logo.brand-tile {
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.06);
+}
+
+.logo img {
+  border-radius: 3px;
+}
+
+.rows {
   margin: 0;
   padding: 0;
   list-style: none;
-  border: 1px solid var(--border);
-  border-radius: 8px;
 }
 
-.platform {
+.row {
   display: grid;
-  gap: 8px;
-  padding: 10px 12px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 14px;
 }
 
-.platform + .platform {
+.row + .row {
   border-top: 1px solid var(--border);
 }
 
-.platform p {
-  margin: 2px 0 0;
+.row strong {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.row .muted,
+.row .error,
+.row .ok {
+  display: block;
+  margin-top: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .row-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
 }
 
-.actions {
+.status {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin: 12px 12px 0;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+
+.status > div {
+  min-width: 0;
+  flex: 1;
+}
+
+.dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  vertical-align: 1px;
+}
+
+.site {
   display: grid;
-  gap: 8px;
-  margin-top: 16px;
+  gap: 10px;
+  margin: 12px 12px 0;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--accent-wash);
+}
+
+.site p {
+  font-size: 12.5px;
+}
+
+.empty {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 22px 18px 18px;
+  text-align: center;
+}
+
+.logo-row {
+  display: flex;
+  gap: 6px;
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+  padding: 9px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--sunken);
 }
 
 button {
   font: inherit;
-  padding: 7px 12px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: transparent;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 6px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg);
   color: var(--fg);
   cursor: pointer;
+  transition:
+    background-color 120ms,
+    border-color 120ms;
 }
 
 button:hover:not(:disabled) {
-  border-color: var(--fg);
+  background: var(--sunken);
 }
 
 button:focus-visible {
-  outline: 2px solid #1747a6;
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
@@ -141,16 +263,48 @@ button:disabled {
 }
 
 button.primary {
-  background: var(--primary-bg);
-  color: var(--primary-fg);
-  border-color: var(--primary-bg);
-  font-weight: 600;
+  background: var(--fg);
+  color: var(--bg);
+  border-color: var(--fg);
+}
+
+button.primary:hover:not(:disabled) {
+  background: var(--fg);
+  opacity: 0.88;
+}
+
+button.accent {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+
+button.accent:hover:not(:disabled) {
+  background: var(--accent);
+  opacity: 0.9;
+}
+
+button.wide {
+  width: 100%;
+  padding: 8px 12px;
 }
 
 button.link {
   border: none;
   padding: 4px 0;
+  background: none;
   color: var(--muted);
-  text-align: left;
-  font-size: 13px;
+  font-weight: 500;
+}
+
+button.link.small {
+  padding: 2px 0 0;
+  font-size: 12px;
+}
+
+button.link:hover:not(:disabled) {
+  background: none;
+  color: var(--fg);
 }

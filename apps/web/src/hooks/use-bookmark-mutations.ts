@@ -23,7 +23,7 @@ import { matchesView } from '@/lib/bookmark-view';
 type Pages = InfiniteData<BookmarkPage, string | null>;
 type Snapshot = [QueryKey, unknown][];
 
-function applyPatch(bookmark: Bookmark, patch: UpdateBookmarkRequest): Bookmark {
+export function applyPatch(bookmark: Bookmark, patch: UpdateBookmarkRequest): Bookmark {
   return {
     ...bookmark,
     ...(patch.status !== undefined && { status: patch.status }),

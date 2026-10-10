@@ -2,47 +2,43 @@
 
 import { MAX_INGEST_BATCH } from '@bc/shared';
 import { useQueryClient } from '@tanstack/react-query';
+import { LoaderCircle, Upload } from 'lucide-react';
 import { type ChangeEvent, useRef, useState } from 'react';
-import { UploadIcon } from '@/components/ui/icons';
-import { buttonGhost } from '@/components/ui/styles';
+import { buttonSecondary } from '@/components/ui/styles';
+import { useToast } from '@/components/ui/toaster';
 import { ingestBookmarks, queryKeys } from '@/lib/api/bookmarks';
 import { parseNetscapeBookmarks } from '@/lib/import/netscape';
 
 const MAX_FILE_BYTES = 20 * 1024 * 1024;
 const numberFormat = new Intl.NumberFormat('en');
 
-type ImportState =
-  | { phase: 'idle' }
-  | { phase: 'running'; done: number; total: number }
-  | { phase: 'finished'; created: number; updated: number; skipped: number }
-  | { phase: 'failed'; message: string };
-
 /** Imports a `bookmarks.html` export (Chrome, Firefox, Safari, Edge) in API-sized batches. */
-export function ImportBookmarksButton() {
+export function ImportBookmarksButton({ className = '' }: { className?: string }) {
   const queryClient = useQueryClient();
+  const toast = useToast();
   const fileInput = useRef<HTMLInputElement>(null);
-  const [state, setState] = useState<ImportState>({ phase: 'idle' });
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
 
   async function handleFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
     if (file.size > MAX_FILE_BYTES) {
-      setState({ phase: 'failed', message: 'That file is larger than 20 MB.' });
+      toast({ message: 'That file is larger than 20 MB.', tone: 'error' });
       return;
     }
 
     const items = parseNetscapeBookmarks(await file.text());
     if (items.length === 0) {
-      setState({
-        phase: 'failed',
-        message: 'No bookmarks found. Choose an exported bookmarks .html file.',
+      toast({
+        message: 'No bookmarks found. Choose a bookmarks .html file exported from your browser.',
+        tone: 'error',
       });
       return;
     }
 
     const totals = { created: 0, updated: 0, skipped: 0 };
-    setState({ phase: 'running', done: 0, total: items.length });
+    setProgress({ done: 0, total: items.length });
     try {
       for (let start = 0; start < items.length; start += MAX_INGEST_BATCH) {
         const batch = items.slice(start, start + MAX_INGEST_BATCH);
@@ -50,21 +46,26 @@ export function ImportBookmarksButton() {
         totals.created += result.created;
         totals.updated += result.updated;
         totals.skipped += batch.length - result.created - result.updated;
-        setState({ phase: 'running', done: start + batch.length, total: items.length });
+        setProgress({ done: start + batch.length, total: items.length });
       }
-      setState({ phase: 'finished', ...totals });
+      const skipped =
+        totals.skipped > 0 ? `, ${numberFormat.format(totals.skipped)} unchanged or skipped` : '';
+      toast({
+        message: `Imported ${numberFormat.format(totals.created)} new, ${numberFormat.format(totals.updated)} updated${skipped}`,
+      });
     } catch {
-      setState({
-        phase: 'failed',
-        message: `Import stopped after ${numberFormat.format(totals.created)} new bookmarks. Please try again; nothing will be duplicated.`,
+      toast({
+        message: `Import stopped after ${numberFormat.format(totals.created)} new bookmarks. Try again; nothing will be duplicated.`,
+        tone: 'error',
       });
     } finally {
+      setProgress(null);
       await queryClient.invalidateQueries({ queryKey: queryKeys.bookmarks });
     }
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+    <>
       <input
         ref={fileInput}
         type="file"
@@ -77,31 +78,19 @@ export function ImportBookmarksButton() {
       <button
         type="button"
         onClick={() => fileInput.current?.click()}
-        disabled={state.phase === 'running'}
-        className={`${buttonGhost} -ml-2 text-ink`}
+        disabled={progress !== null}
+        title="Import a bookmarks.html file exported from Chrome, Firefox, Safari or Edge"
+        className={`${buttonSecondary} h-9 px-3 ${className}`}
       >
-        <UploadIcon />
-        {state.phase === 'running'
-          ? `Importing ${numberFormat.format(state.done)} / ${numberFormat.format(state.total)}…`
-          : 'Import bookmarks.html'}
+        {progress ? (
+          <LoaderCircle size={16} className="animate-spin" aria-hidden />
+        ) : (
+          <Upload size={16} aria-hidden />
+        )}
+        {progress
+          ? `Importing ${numberFormat.format(progress.done)} / ${numberFormat.format(progress.total)}`
+          : 'Import'}
       </button>
-      {state.phase === 'idle' && (
-        <span className="text-[13px] text-ink-soft max-sm:hidden">
-          exported from Chrome, Firefox, Safari or Edge
-        </span>
-      )}
-      {state.phase === 'finished' && (
-        <p role="status" className="text-[13px] font-medium text-good">
-          Imported: {numberFormat.format(state.created)} new, {numberFormat.format(state.updated)}{' '}
-          updated
-          {state.skipped > 0 && `, ${numberFormat.format(state.skipped)} unchanged or skipped`}
-        </p>
-      )}
-      {state.phase === 'failed' && (
-        <p role="alert" className="text-[13px] text-danger">
-          {state.message}
-        </p>
-      )}
-    </div>
+    </>
   );
 }

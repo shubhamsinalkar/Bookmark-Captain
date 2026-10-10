@@ -35,6 +35,12 @@ export default defineConfig({
         AUTH_DEV_LOGIN: 'true',
         GOOGLE_CLIENT_ID: '',
         GOOGLE_CLIENT_SECRET: '',
+        // AI off, whatever .env says: summaries arrive at unpredictable times and replace the
+        // post text the tests look for (and would spend the provider's quota).
+        AI_PROVIDER: '',
+        AI_API_KEY: '',
+        ANTHROPIC_API_KEY: '',
+        VOYAGE_API_KEY: '',
       },
     },
     {
