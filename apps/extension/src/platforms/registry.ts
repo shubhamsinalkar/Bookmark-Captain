@@ -1,12 +1,13 @@
 import type { Platform } from '@bc/shared';
 import { INSTAGRAM_ORIGIN, INSTAGRAM_SYNC_URL } from './instagram/constants';
+import { LINKEDIN_ORIGIN, LINKEDIN_SAVED_URL } from './linkedin/constants';
 import { REDDIT_ORIGIN, REDDIT_SAVED_URL } from './reddit/constants';
 import type { PlatformAdapter } from './types';
 import { WATCH_LATER_URL, YOUTUBE_ORIGIN } from './youtube/constants';
 
 /**
  * Every platform the extension can sync by reading the user's own signed-in pages.
- * Adding one (LinkedIn, Instagram, …) means: a parser, a `main.ts` tap entry and a
+ * Adding one (GitHub, …) means: a parser, a `main.ts` tap entry and a
  * `content.ts` reader under platforms/<name>/, the two bundles in scripts/build.ts, its
  * host in the manifest, and an entry here. Scheduling, sessions, the outbox, the popup and
  * the web app's Platforms card all work from this list.
@@ -37,6 +38,15 @@ export const ADAPTERS: readonly PlatformAdapter[] = [
     matches: [`${INSTAGRAM_ORIGIN}/*`],
     syncUrl: INSTAGRAM_SYNC_URL,
     scripts: { main: 'instagram-main.js', content: 'instagram-content.js' },
+    catchUpMinutes: [30, 60],
+  },
+  {
+    platform: 'linkedin',
+    label: 'LinkedIn',
+    origin: LINKEDIN_ORIGIN,
+    matches: [`${LINKEDIN_ORIGIN}/*`],
+    syncUrl: LINKEDIN_SAVED_URL,
+    scripts: { main: 'linkedin-main.js', content: 'linkedin-content.js' },
     catchUpMinutes: [30, 60],
   },
   {

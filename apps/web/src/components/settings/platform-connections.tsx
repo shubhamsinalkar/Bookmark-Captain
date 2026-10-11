@@ -31,8 +31,8 @@ async function loadView(): Promise<View> {
 const EXAMPLE_SITES = ['pinterest.com', 'medium.com', 'producthunt.com', 'dev.to'];
 
 /**
- * Platforms the extension syncs from your own signed-in pages (X, Reddit, Instagram, YouTube,
- * learned sites). The extension holds this state, so the page asks it through the bridge
+ * Platforms the extension syncs from your own signed-in pages (X, Reddit, Instagram, LinkedIn,
+ * YouTube, learned sites). The extension holds this state, so the page asks it through the bridge
  * rather than the API.
  */
 export function PlatformConnections() {
@@ -91,7 +91,7 @@ export function PlatformConnections() {
     return (
       <div className="flex flex-wrap items-center gap-5 rounded-2xl border border-dashed border-rule-strong bg-surface/60 p-5">
         <div className="flex -space-x-2">
-          {(['x', 'reddit', 'instagram', 'youtube'] as const).map((platform) => (
+          {(['x', 'reddit', 'instagram', 'linkedin', 'youtube'] as const).map((platform) => (
             <span key={platform} className="rounded-[11px] ring-2 ring-paper">
               <PlatformLogo platform={platform} size={36} />
             </span>
@@ -217,7 +217,7 @@ export function PlatformConnections() {
         <div className="min-w-0 flex-1">
           <p className="font-semibold">Any other site</p>
           <p className={`${hint} mt-1 max-w-prose`}>
-            Open the page that lists your saved posts (LinkedIn Saved posts, a Pinterest board…),
+            Open the page that lists your saved posts (a Pinterest board, a Medium reading list…),
             click the Bookmark Captain extension and choose Sync this list. It learns the page,
             shows you what it found, and keeps checking for new saves.
           </p>

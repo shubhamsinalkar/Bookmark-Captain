@@ -228,7 +228,7 @@ async function render(): Promise<void> {
         el(
           'div',
           { className: 'logo-row' },
-          ...(['browser', 'x', 'reddit', 'instagram', 'youtube'] as const).map((id) =>
+          ...(['browser', 'x', 'reddit', 'instagram', 'linkedin', 'youtube'] as const).map((id) =>
             logo(id, 30),
           ),
         ),

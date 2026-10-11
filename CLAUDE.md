@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Bookmark Captain collects saved posts from every platform (browser bookmarks, X, Reddit, Instagram, YouTube Watch later, plus any site taught with "Sync this list"; LinkedIn/GitHub planned) into one inbox. How to use it (setup, connecting platforms, troubleshooting) is in `docs/USER_GUIDE.md` — keep it current when user-visible behaviour changes. Roadmap and current status live outside the repo in `~/.claude/plans/i-want-to-make-mighty-castle.md` — its **Status** section overrides the original stack (Supabase was replaced by Express + Neon).
+Bookmark Captain collects saved posts from every platform (browser bookmarks, X, Reddit, Instagram, LinkedIn, YouTube Watch later, plus any site taught with "Sync this list"; GitHub planned) into one inbox. How to use it (setup, connecting platforms, troubleshooting) is in `docs/USER_GUIDE.md` — keep it current when user-visible behaviour changes. Roadmap and current status live outside the repo in `~/.claude/plans/i-want-to-make-mighty-castle.md` — its **Status** section overrides the original stack (Supabase was replaced by Express + Neon).
 
 ## Commands
 

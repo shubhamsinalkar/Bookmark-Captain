@@ -100,7 +100,7 @@ export function ExtensionConnect() {
       <h1 className={`${pageTitle} mt-7 text-center`}>Connect the Chrome extension</h1>
       <p className={`${hint} mx-auto mt-2 max-w-md text-center`}>
         It imports your browser bookmarks, keeps them in sync, and reads the saved lists of X,
-        Reddit, Instagram, YouTube and other sites.
+        Reddit, Instagram, LinkedIn, YouTube and other sites.
       </p>
 
       <section className={`${panel} mt-8 space-y-5 p-6 sm:p-7`} aria-live="polite">

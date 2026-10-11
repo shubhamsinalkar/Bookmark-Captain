@@ -32,6 +32,10 @@ const SOURCES: { platform: Platform; label?: string; body: string }[] = [
     body: 'Saved posts and reels come in, and new saves follow within seconds.',
   },
   {
+    platform: 'linkedin',
+    body: 'Your saved posts come in, and anything you save later follows within seconds.',
+  },
+  {
     platform: 'youtube',
     body: 'Your Watch later playlist comes in, and every video you add to it follows.',
   },
@@ -198,7 +202,7 @@ export default async function LandingPage() {
             </ul>
             <p className="mt-8 flex flex-wrap items-center gap-2 text-sm text-ink-soft">
               <span className="font-medium text-ink">Any other site:</span>
-              open the page that lists your saves (LinkedIn, Pinterest…) and click Sync this list in
+              open the page that lists your saves (Pinterest, Medium…) and click Sync this list in
               the extension. It learns the page and keeps checking.
             </p>
           </div>
