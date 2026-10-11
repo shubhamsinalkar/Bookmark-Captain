@@ -10,6 +10,7 @@ import {
   getPlatformStatuses,
   handleCaptured,
   handleDone,
+  handleListed,
   handlePlatformAlarm,
   handleProgress,
   handleRemoved,
@@ -171,6 +172,9 @@ async function handleMessage(message: RuntimeRequest, sender: chrome.runtime.Mes
       return ok;
     case 'platform:recheck':
       await requestRecheck(message.platform);
+      return ok;
+    case 'platform:listed':
+      await handleListed(message.platform, message.listedIds, message.listEmpty === true);
       return ok;
     case 'platform:progress':
       await handleProgress(tabId);

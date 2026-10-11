@@ -61,6 +61,11 @@ export interface PlatformRunner {
   unsaved(externalIds: string[]): void;
   /** The user just unsaved posts that can't be named: read the saved list again soon. */
   recheck(): void;
+  /**
+   * The adapter just read the whole saved list itself (e.g. after such an unsave): posts
+   * synced before that aren't in it are removed. `empty`: the site said the list is empty.
+   */
+  listed(externalIds: string[], empty?: boolean): void;
 }
 
 export function createRunner({
@@ -205,6 +210,14 @@ export function createRunner({
     },
     recheck() {
       void sendToBackground({ type: 'platform:recheck', platform }).catch(() => undefined);
+    },
+    listed(externalIds, empty = false) {
+      void sendToBackground({
+        type: 'platform:listed',
+        platform,
+        listedIds: externalIds,
+        ...(empty && { listEmpty: true }),
+      }).catch(() => undefined);
     },
   };
 }

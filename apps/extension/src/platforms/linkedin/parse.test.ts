@@ -234,9 +234,39 @@ describe('saveChange', () => {
     expect(saveChange(`save-state:${URN_1}`, undefined)).toEqual({ urn: URN_1, saved: null });
   });
 
+  it("reads the 2026 feed's save action, which names the post by its id alone", () => {
+    // As sent by the feed's ⋯ menu (`sduiid=com.linkedin.sdui.update.saveState`), trimmed.
+    const body = (isSaved: boolean) =>
+      JSON.stringify({
+        requestId: 'com.linkedin.sdui.update.saveState',
+        serverRequest: {
+          requestedArguments: {
+            payload: {
+              isSaved,
+              saveObjectUrn: {
+                saveEntityUrnFeedUpdateUrn: {
+                  feedUpdateUrn: {
+                    updateUrnActivityUrn: { activityUrn: { activityId: '7514732881370415104' } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+    const urn = 'urn:li:activity:7514732881370415104';
+    expect(saveChange('save-state:', body(false))).toEqual({ urn, saved: false });
+    expect(saveChange('save-state:', body(true))).toEqual({ urn, saved: true });
+  });
+
   it('ignores other requests', () => {
-    expect(saveChange('feed', '{"saved":true}')).toBeNull();
-    expect(saveChange('save-state:', '{"saved":true}')).toBeNull();
+    expect(saveChange('feed', '{"saved":true}')).toEqual(null);
+    // Mentions saving, but names neither a post nor a state.
+    expect(saveChange('save-state:', '{"draft":"hello"}')).toBeNull();
+  });
+
+  it('keeps the state when the post is not named', () => {
+    expect(saveChange('save-state:', '{"saved":true}')).toEqual({ urn: null, saved: true });
   });
 });
 

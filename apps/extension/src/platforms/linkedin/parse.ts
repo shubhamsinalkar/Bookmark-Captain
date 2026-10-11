@@ -321,20 +321,28 @@ export function savedPostsDatalet(textContent: string): { request: string; body:
 }
 
 export interface SaveChange {
-  urn: string;
+  /** The post, when the request names it. */
+  urn: string | null;
   /** true: saved, false: unsaved, null: the request didn't say plainly. */
   saved: boolean | null;
 }
 
 /**
- * A save or unsave request (`op` from `linkedinOperation`): the post's URN from the address
- * (or else the body), and which way it went from the body (`{"patch":{"$set":{"saved":true}}}`).
+ * A save or unsave request (`op` from `linkedinOperation`). Two shapes are known:
+ *  - the feed (2026): `rsc-action/…?sduiid=com.linkedin.sdui.update.saveState` with
+ *    `{"payload":{"isSaved":false,"saveObjectUrn":{…{"activityUrn":{"activityId":"751…"}}}}}`:
+ *    an id on its own (for a post shown through someone's activity, not the id the saved
+ *    list uses), and the new state;
+ *  - Voyager: the URN in the address and `{"patch":{"$set":{"saved":true}}}`.
  */
 export function saveChange(op: string, requestBody: string | undefined): SaveChange | null {
   if (!op.startsWith('save-state:')) return null;
-  const urn = postUrnOf(op) ?? postUrnOf(requestBody);
-  if (!urn) return null;
-  const flag = /"saved"\s*:\s*(true|false)/.exec(requestBody ?? '')?.[1];
+  const body = requestBody ?? '';
+  const id = /"(activity|ugcPost|share)Id"\s*:\s*"?(\d{5,25})/.exec(body);
+  const urn = postUrnOf(op) ?? postUrnOf(body) ?? (id ? `urn:li:${id[1]}:${id[2]}` : null);
+  const flag = /"(?:is)?[sS]aved"\s*:\s*(true|false)/.exec(body)?.[1];
+  // Neither a post nor a state: some other request that happens to mention saving.
+  if (!urn && flag === undefined) return null;
   return { urn, saved: flag === undefined ? null : flag === 'true' };
 }
 

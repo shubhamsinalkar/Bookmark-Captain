@@ -31,6 +31,11 @@ export type RuntimeRequest =
     }
   | { type: 'platform:removed'; platform: Platform; externalIds: string[] }
   | { type: 'platform:recheck'; platform: Platform }
+  /**
+   * The whole saved list, just read to its end outside a sync session (e.g. right after an
+   * unsave the page couldn't name): anything synced before that isn't in it is removed.
+   */
+  | { type: 'platform:listed'; platform: Platform; listedIds: string[]; listEmpty?: boolean }
   | { type: 'platform:progress'; platform: Platform; found: number }
   | {
       type: 'platform:done';
@@ -56,6 +61,7 @@ export const PLATFORM_PAGE_REQUESTS = new Set<RuntimeRequest['type']>([
   'platform:captured',
   'platform:removed',
   'platform:recheck',
+  'platform:listed',
   'platform:progress',
   'platform:done',
   'platform:close-tab',

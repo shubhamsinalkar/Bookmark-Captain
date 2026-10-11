@@ -712,9 +712,19 @@ export async function handleDone(
   // The whole list was read: anything synced before that is gone from it was unsaved.
   const session = (await readSessions())[tabId];
   if (session && session.mode !== 'learn' && outcome === 'complete' && Array.isArray(listedIds)) {
-    const listed = listedIds.filter((id): id is string => typeof id === 'string');
-    const known = (await readState()).knownIds[session.platform] ?? [];
-    await handleRemoved(session.platform, unlistedIds(known, listed, { listEmpty }));
+    await handleListed(session.platform, listedIds, listEmpty);
   }
   await endSession(tabId, outcome);
+}
+
+/** The whole saved list was just read: remove what was synced before and is gone from it. */
+export async function handleListed(
+  platform: Platform,
+  listedIds: unknown,
+  listEmpty = false,
+): Promise<void> {
+  if (!Array.isArray(listedIds)) return;
+  const listed = listedIds.filter((id): id is string => typeof id === 'string');
+  const known = (await readState()).knownIds[platform] ?? [];
+  await handleRemoved(platform, unlistedIds(known, listed, { listEmpty }));
 }

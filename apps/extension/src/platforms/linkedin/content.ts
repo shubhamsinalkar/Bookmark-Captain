@@ -36,14 +36,12 @@ const ADDRESS_WAIT_MS = 10_000;
  */
 const LIVE_CHECK_DELAYS_MS = [1_500, 6_000];
 const RECENT_LIMIT = 3_000;
+/** Pages of the saved list read in place after an unsave (beyond: a background sync). */
+const MAX_LIST_PAGES = 20;
 /** The saved list's address, kept for pages that never load the list (the feed). */
 const ADDRESS_STORAGE_KEY = 'linkedinSavedListAddress';
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-// TEMPORARY diagnostics for live unsave: remove once it is confirmed working on linkedin.com.
-const debug = (...args: unknown[]) => console.warn('[Bookmark Captain · LinkedIn]', ...args);
-debug('content script running on', window.location.pathname);
 
 class SignedOutError extends Error {}
 
@@ -176,13 +174,6 @@ async function loadNextPage() {
     const step = Math.max(page.count ?? 0, page.posts.length);
     nextStart += step;
     reachedEnd = page.posts.length === 0 || (page.total !== null && nextStart >= page.total);
-    debug('sync read a page', {
-      ids: page.posts.map((post) => post.externalId),
-      count: page.count,
-      total: page.total,
-      nextStart,
-      reachedEnd,
-    });
     runner.listPage({
       posts: page.posts,
       hasMore: !reachedEnd,
@@ -236,25 +227,50 @@ let checkTimers: ReturnType<typeof setTimeout>[] = [];
 /** Read the top of the saved list: whatever is new there was just saved. */
 async function checkSavedList() {
   const page = await readFirstPage();
-  debug(
-    'saved list top after a save',
-    page.posts.map((post) => post.externalId),
-  );
   // Posts already in the inbox are only refreshed; new ones are dated now.
   runner.saved(page.posts);
 }
 
+/** Reads the whole saved list (every page) and reports it, so what is gone is removed. */
+async function checkWholeList() {
+  const address = savedAddress ?? (await storedAddress) ?? FALLBACK_SAVED_POSTS_ADDRESS;
+  const ids: string[] = [];
+  let start = 0;
+  for (let pages = 0; pages < MAX_LIST_PAGES; pages++) {
+    const page = parseSavedPostsPage(
+      await withRetry(() => getJson(savedPostsPageAddress(address, start))),
+    );
+    remember(page.posts);
+    ids.push(...page.posts.map((post) => post.externalId));
+    const step = Math.max(page.count ?? 0, page.posts.length);
+    start += step;
+    const end = page.posts.length === 0 || (page.total !== null && start >= page.total);
+    if (end) {
+      runner.listed(ids, ids.length === 0 && page.total === 0);
+      return;
+    }
+  }
+  // Longer than we read here: the background reads it in a tab instead.
+  runner.recheck();
+}
+
+let wholeListTimers: ReturnType<typeof setTimeout>[] = [];
+
 /**
- * Something may have been saved or unsaved: read the saved list shortly (again if more
- * clicks follow). A save shows up at its top. An unsave can't be seen there (the post may
- * have been far down the list), so it asks the background to read the whole list again,
- * which removes whatever is gone; when the post is known, it is removed straight away too.
+ * Something was saved or unsaved:
+ *  - a save: read the top of the saved list shortly (again if more follow); it shows up there;
+ *  - an unsave: read the whole saved list, which removes whatever is gone. LinkedIn's unsave
+ *    request names the post by an id its saved list doesn't use, so the list decides; a
+ *    post that is named and matches is removed straight away too;
+ *  - unknown: both.
  */
-function savedStateChanged(action: 'save' | 'unsave' | null, urn?: string) {
-  debug('saved state changed', { action, urn: urn ?? '(unknown post)' });
+function savedStateChanged(action: 'save' | 'unsave' | null, urn: string | null) {
   if (action !== 'save') {
-    if (urn && action === 'unsave') runner.unsaved([urn]);
-    runner.recheck();
+    if (action === 'unsave' && urn) runner.unsaved([urn]);
+    for (const timer of wholeListTimers) clearTimeout(timer);
+    wholeListTimers = LIVE_CHECK_DELAYS_MS.map((delay) =>
+      setTimeout(() => void checkWholeList().catch(() => runner.recheck()), delay),
+    );
   }
   if (action === 'unsave') return;
   for (const timer of checkTimers) clearTimeout(timer);
@@ -263,9 +279,14 @@ function savedStateChanged(action: 'save' | 'unsave' | null, urn?: string) {
   );
 }
 
+/** When LinkedIn's own save request was last seen (it names the post, a click may not). */
+let lastSaveRequestAt = 0;
+/** How long a Save/Unsave click waits for that request before acting on its own. */
+const SAVE_REQUEST_WAIT_MS = 3_000;
+
 /**
- * The post a control belongs to: LinkedIn marks each post's card with its URN
- * (`data-urn`, `data-id`, `data-chameleon-result-urn`, …), so look up through the parents.
+ * The post a control belongs to, where the page marks cards with their URN (the saved-posts
+ * page: `data-chameleon-result-urn`). The 2026 feed doesn't; its save request names the post.
  */
 function postUrnNear(element: Element): string | null {
   for (let node: Element | null = element; node; node = node.parentElement) {
@@ -277,41 +298,30 @@ function postUrnNear(element: Element): string | null {
   return null;
 }
 
-/** The post whose ⋯ menu was opened last: its menu items may be drawn outside the card. */
-let menuPost: { urn: string; at: number } | null = null;
-const MENU_POST_TTL_MS = 60_000;
-
 /**
- * Save / Unsave clicks, whatever request LinkedIn sends for them. Read on pointerdown (and
- * Enter/Space), while the menu item is still on the page: LinkedIn closes its menus, removing
- * the item, before a click would arrive.
+ * Save / Unsave clicks, a fallback for when LinkedIn's request isn't recognised. Read on
+ * pointerdown (and Enter/Space), while the menu item is still on the page: LinkedIn closes
+ * its menus, removing the item, before a click would arrive.
  */
 function onControl(event: Event) {
   const target = event.target instanceof Element ? event.target : null;
   const control = target?.closest('button, a, [role="button"], [role="menuitem"], li');
   if (!(control instanceof HTMLElement)) return;
-  const urn = postUrnNear(control);
   const action =
     saveActionOfLabel(control.innerText) ??
     saveActionOfLabel(control.getAttribute('aria-label') ?? '');
-  if (/sav/i.test(`${control.innerText} ${control.getAttribute('aria-label') ?? ''}`)) {
-    debug('pressed', {
-      text: control.innerText.slice(0, 80),
-      label: control.getAttribute('aria-label'),
-      action,
-      urn,
-    });
-  }
-  if (!action) {
-    // Possibly a post's ⋯ button: remember which post its menu is for.
-    if (urn) menuPost = { urn, at: Date.now() };
+  if (!action) return;
+  const urn = postUrnNear(control);
+  if (urn) {
+    const shown = action === 'save' ? recent.get(urn) : undefined;
+    if (shown) runner.saved([shown]);
+    savedStateChanged(action, urn);
     return;
   }
-  const fromMenu = menuPost && Date.now() - menuPost.at < MENU_POST_TTL_MS ? menuPost.urn : null;
-  const post = urn ?? fromMenu ?? undefined;
-  const shown = action === 'save' && post ? recent.get(post) : undefined;
-  if (shown) runner.saved([shown]);
-  savedStateChanged(action, post);
+  const pressedAt = Date.now();
+  setTimeout(() => {
+    if (lastSaveRequestAt < pressedAt) savedStateChanged(action, null);
+  }, SAVE_REQUEST_WAIT_MS);
 }
 
 document.addEventListener('pointerdown', onControl, true);
@@ -327,15 +337,16 @@ listenToTap(LINKEDIN_TAP_TAG, ({ op, status, requestBody, json }) => {
   if (status < 200 || status >= 300) return;
 
   if (op.startsWith('save-state:')) {
-    debug('save-like request', { op, status, body: requestBody?.slice(0, 300) });
     // A request that changes something (it has a body), not one that only reads.
     if (requestBody === undefined) return;
     const change = saveChange(op, requestBody);
-    const shown = change?.saved === true ? recent.get(change.urn) : undefined;
+    if (!change) return;
+    lastSaveRequestAt = Date.now();
+    const shown = change.saved === true && change.urn ? recent.get(change.urn) : undefined;
     if (shown) runner.saved([shown]);
     savedStateChanged(
-      change?.saved === true ? 'save' : change?.saved === false ? 'unsave' : null,
-      change?.urn,
+      change.saved === true ? 'save' : change.saved === false ? 'unsave' : null,
+      change.urn,
     );
     return;
   }
