@@ -122,6 +122,6 @@ test('Instagram: connecting imports your saved posts, then new saves sync live',
 
   // Disconnecting stops the sync.
   await page.goto('/settings');
-  await page.getByRole('button', { name: 'Disconnect', exact: true }).click();
+  await page.locator('#platforms').getByRole('button', { name: 'Disconnect', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Connect Instagram' })).toBeVisible();
 });

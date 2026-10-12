@@ -100,6 +100,6 @@ test('X: connecting imports your bookmarks, then new saves sync live', async ({
 
   // Disconnecting stops the sync.
   await page.goto('/settings');
-  await page.getByRole('button', { name: 'Disconnect', exact: true }).click();
+  await page.locator('#platforms').getByRole('button', { name: 'Disconnect', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Connect X' })).toBeVisible();
 });

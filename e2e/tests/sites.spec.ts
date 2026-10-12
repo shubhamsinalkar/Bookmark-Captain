@@ -135,6 +135,6 @@ test('any site: taught from its saved page, confirmed from a preview, then synce
   await app.goto('/settings');
   await expect(app.getByText('learned from your saved page')).toBeVisible();
   await expect(app.getByText('5 posts synced')).toBeVisible();
-  await app.getByRole('button', { name: 'Disconnect', exact: true }).click();
+  await app.locator('#platforms').getByRole('button', { name: 'Disconnect', exact: true }).click();
   await expect(app.getByText('learned from your saved page')).toHaveCount(0);
 });
