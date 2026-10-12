@@ -37,8 +37,8 @@ export default async function LoginPage({
         aria-hidden
         className="relative hidden flex-col justify-between overflow-hidden bg-[#150c24] p-12 text-white lg:flex"
       >
-        <div className="pointer-events-none absolute -top-40 -left-32 size-[34rem] rounded-full bg-[#c8358f]/35 blur-[120px]" />
-        <div className="pointer-events-none absolute -right-24 -bottom-48 size-[30rem] rounded-full bg-[#5b52f0]/30 blur-[120px]" />
+        <div className="pointer-events-none absolute -top-40 -left-32 size-136 rounded-full bg-[#c8358f]/35 blur-[120px]" />
+        <div className="pointer-events-none absolute -right-24 -bottom-48 size-120 rounded-full bg-[#5b52f0]/30 blur-[120px]" />
         <Link
           href="/"
           className="relative inline-flex items-center gap-2.5 text-[15px] font-semibold"

@@ -305,9 +305,9 @@ export default async function LandingPage() {
         </section>
 
         <section aria-labelledby="cta-title" className={`${container} pb-20 sm:pb-28`}>
-          <div className="relative overflow-hidden rounded-[2rem] bg-[#150c24] px-6 py-14 text-white sm:px-14 sm:py-16">
-            <div className="pointer-events-none absolute -top-32 -right-20 size-[28rem] rounded-full bg-[#c8358f]/40 blur-[110px]" />
-            <div className="pointer-events-none absolute -bottom-40 -left-10 size-[24rem] rounded-full bg-[#5b52f0]/30 blur-[110px]" />
+          <div className="relative overflow-hidden rounded-4xl bg-[#150c24] px-6 py-14 text-white sm:px-14 sm:py-16">
+            <div className="pointer-events-none absolute -top-32 -right-20 size-112 rounded-full bg-[#c8358f]/40 blur-[110px]" />
+            <div className="pointer-events-none absolute -bottom-40 -left-10 size-96 rounded-full bg-[#5b52f0]/30 blur-[110px]" />
             <div className="relative flex flex-col items-start justify-between gap-8 md:flex-row md:items-center">
               <h2
                 id="cta-title"
