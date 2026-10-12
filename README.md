@@ -15,7 +15,7 @@ the inbox, and troubleshooting.
 - **Import `bookmarks.html`** — exports from Chrome, Firefox, Safari or Edge, with folder paths.
 - **Chrome extension** — imports all browser bookmarks, then syncs every add, edit, move and
   delete as it happens. Changes made offline are queued and retried.
-- **Platforms** — X bookmarks, Reddit saves, Instagram saves and YouTube Watch later: imported
+- **Platforms** — X bookmarks, Reddit, Instagram and LinkedIn saves, YouTube Watch later: imported
   once, then new saves (and unsaves) sync within seconds, plus a check every 30–60 minutes.
   Any other site can be taught from its saved page ("Sync this list", experimental).
 - **Accounts** — Google sign-in, plus an email-only sign-in for local development.

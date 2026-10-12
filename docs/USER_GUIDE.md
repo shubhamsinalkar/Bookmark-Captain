@@ -1,7 +1,7 @@
 # Bookmark Captain — User Guide
 
-Bookmark Captain collects everything you save — Chrome bookmarks, X bookmarks, Reddit and
-Instagram saves, YouTube Watch later — into **one inbox**, where you read it, snooze it, or
+Bookmark Captain collects everything you save — Chrome bookmarks, X bookmarks, Reddit,
+Instagram and LinkedIn saves, YouTube Watch later — into **one inbox**, where you read it, snooze it, or
 clear it out.
 
 It has three parts:
@@ -117,11 +117,12 @@ platform as **Connected · N posts synced**.
 | **X**         | Your Bookmarks                     | The bookmark icon on any post                                     |
 | **Reddit**    | Saved posts **and saved comments** | **Save** in a post's or comment's ⋯ menu                          |
 | **Instagram** | Saved posts, reels and carousels   | The save (ribbon) icon under a post                               |
+| **LinkedIn**  | Saved posts                        | **Save** in a post's ⋯ menu                                       |
 | **YouTube**   | Your **Watch later** playlist      | The clock (Watch later) button, the ⋯ menu, or Save → Watch later |
 
 ### Any other site (experimental)
 
-For sites without a built-in connector (LinkedIn, Pinterest, …):
+For sites without a built-in connector (Pinterest, Medium, …):
 
 1. Open the page that **lists your saved posts** on that site — not a single post.
 2. Scroll so a few saved posts are visible.
@@ -136,15 +137,15 @@ structure (not your posts) and is what's needed to fix it.
 
 ## 3. How new saves arrive
 
-| You do this (in Chrome)                        | It shows up in your inbox                       |
-| ---------------------------------------------- | ----------------------------------------------- |
-| Add, edit or remove a Chrome bookmark          | Within seconds                                  |
-| Save / bookmark a post on X, Reddit, Instagram | Within seconds                                  |
-| Add a video to YouTube Watch later             | Within seconds                                  |
-| **Unsave** it (or remove from Watch later)     | It is removed from your inbox within seconds    |
-| Save something **on your phone**               | At the next check: every 30–60 min, Chrome open |
-| Open your saved page / Watch later yourself    | Right away (counts as a check)                  |
-| Can't wait                                     | Click **Sync now** (Settings or popup)          |
+| You do this (in Chrome)                       | It shows up in your inbox                       |
+| --------------------------------------------- | ----------------------------------------------- |
+| Add, edit or remove a Chrome bookmark         | Within seconds                                  |
+| Save a post on X, Reddit, Instagram, LinkedIn | Within seconds                                  |
+| Add a video to YouTube Watch later            | Within seconds                                  |
+| **Unsave** it (or remove from Watch later)    | It is removed from your inbox within seconds    |
+| Save something **on your phone**              | At the next check: every 30–60 min, Chrome open |
+| Open your saved page / Watch later yourself   | Right away (counts as a check)                  |
+| Can't wait                                    | Click **Sync now** (Settings or popup)          |
 
 Background checks only happen **while Chrome is open** on this computer. Saves made while it is
 closed come in at the first check after you open it.
@@ -255,7 +256,7 @@ To disconnect Chrome completely: extension popup → **Disconnect this browser**
 its own**:
 
 1. `chrome://extensions` → click the **reload** icon (↻) on Bookmark Captain.
-2. **Reload any open X / Reddit / Instagram / YouTube tabs** — tabs opened before the reload keep
+2. **Reload any open X / Reddit / Instagram / LinkedIn / YouTube tabs** — tabs opened before the reload keep
    running the old code.
 3. **Reload any open Bookmark Captain tabs** (localhost:3000) — until you do, Settings says the
    extension "isn't installed".
@@ -277,7 +278,7 @@ when you reload the extension.
 | Connect page says the extension isn't installed                                   | The page was open before installing: click **Check again** or reload the page                                                                                             |
 | Settings says the extension "isn't installed" right after reloading the extension | The tab was open during the reload: reload the page (F5)                                                                                                                  |
 | Popup not connected / "The access key was rejected"                               | Popup → **Connect account** → **Reconnect extension**                                                                                                                     |
-| "Sign in to Reddit in this browser, then sync again" (or X/Instagram/YouTube)     | Log in to that site in this Chrome, then **Sync now**                                                                                                                     |
+| "Sign in to Reddit in this browser, then sync again" (or another platform)        | Log in to that site in this Chrome, then **Sync now**                                                                                                                     |
 | "… didn't load your saved posts"                                                  | Click **Sync now**. If it repeats, the site may have changed — see below                                                                                                  |
 | Nothing arrives at all                                                            | Is `pnpm dev` running? The popup's "waiting to sync" count shows what is queued                                                                                           |
 | "N bookmarks were skipped: url: Too big…"                                         | Some Chrome bookmarks have extremely long addresses (over 4,096 characters); they are skipped                                                                             |
@@ -287,7 +288,7 @@ when you reload the extension.
 | **Summarising…** for a long time                                                  | Check the API log for "Enrichment paused" and its `reason`: a rate limit just waits (on Groq's free tier, sometimes until the next day); "was rejected" means a wrong key |
 | A card has no summary, but others do                                              | The AI gave up on it after a few tries (or declined it); it is retried if its text changes                                                                                |
 
-**When a site stops working.** X, Reddit, Instagram and YouTube change their websites from time
+**When a site stops working.** X, Reddit, Instagram, LinkedIn and YouTube change their websites from time
 to time. If imports or live saves stop working for one site, the connector for that site
 needs an update. Useful things to collect: a screenshot of the Settings → Platforms row, any
 error on `chrome://extensions` → Bookmark Captain → **Errors**, and what you clicked.
@@ -308,9 +309,10 @@ error on `chrome://extensions` → Bookmark Captain → **Errors**, and what you
 - **Long posts.** With Groq or another OpenAI-compatible provider, only the first ~6,000
   characters of a post are sent, to stay inside free-tier limits.
 - **One computer.** Platform syncing runs in the Chrome where you connected it.
-- **Saved dates.** X, Instagram and YouTube don't say _when_ you saved something. The first
-  import uses each post's publish date (YouTube: the playlist order); later saves get the time
-  they were noticed.
+- **Saved dates.** X, Instagram, LinkedIn and YouTube don't say _when_ you saved something.
+  For X and Instagram the first import uses each post's publish date (YouTube: the playlist
+  order); LinkedIn's uses the time of the import, keeping the saved list's order. Later saves get
+  the time they were noticed.
 - **Instagram images** come from links that expire after some days, so older items may lose
   their picture. The post and its link stay.
 - **YouTube Watch later** isn't always newest-first, so each check reads the whole list. That
@@ -319,6 +321,9 @@ error on `chrome://extensions` → Bookmark Captain → **Errors**, and what you
   here; mark it **Done** or **Archive** it.) Removing a video with Watch later's own **⋯ →
   Remove** sometimes doesn't say which video it was; the extension then re-reads Watch later
   in a background tab, so the video leaves your inbox within about a minute instead of seconds.
+- **LinkedIn** works like YouTube here: each check reads your whole saved list, so a post you
+  unsave on your phone leaves the inbox at the next check. Unsaving in Chrome removes it within
+  a few seconds (the extension re-reads your saved list right after you click **Unsave**).
 
 ---
 
