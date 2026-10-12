@@ -35,6 +35,7 @@ jobs:
     env:
       TEST_DATABASE_URL: postgres://bc:bc@localhost:5432/bookmark_captain_test
       NEXT_PUBLIC_API_URL: http://localhost:4000
+      WEB_URL: http://localhost:3000
 
     steps:
       - uses: actions/checkout@v4
