@@ -45,7 +45,23 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 class SignedOutError extends Error {}
 
-const onSavedPage = () => window.location.pathname.startsWith(SAVED_POSTS_PATH);
+/**
+ * This script also runs in LinkedIn's frames: the feed opens "Saved items" in a full-page
+ * iframe (`/preload/`), so that is where its Unsave is clicked. Frames only report saves and
+ * unsaves; sync sessions belong to the top page.
+ */
+const isTopFrame = window.top === window;
+
+/** The address the user sees: the top page's, also from inside LinkedIn's (same-origin) frames. */
+function shownPath(): string {
+  try {
+    return window.top?.location.pathname ?? window.location.pathname;
+  } catch {
+    return window.location.pathname;
+  }
+}
+
+const onSavedPage = () => shownPath().startsWith(SAVED_POSTS_PATH);
 
 /** LinkedIn's API wants the session cookie's value back as a CSRF token, like its web app sends. */
 function csrfToken(): string | null {
@@ -155,10 +171,11 @@ async function readFirstPage() {
 
 // ── Sync: read the list page by page ────────────────────────────────────────────────
 
-const session: Promise<SessionInfo> = sendToBackground({
-  type: 'platform:session',
-  platform: 'linkedin',
-}).catch((): SessionInfo => ({ mode: 'passive' }));
+const session: Promise<SessionInfo> = isTopFrame
+  ? sendToBackground({ type: 'platform:session', platform: 'linkedin' }).catch((): SessionInfo => ({
+      mode: 'passive',
+    }))
+  : Promise.resolve({ mode: 'passive' });
 
 let signedOut = false;
 let nextStart = 0;
@@ -203,6 +220,21 @@ const runner = createRunner({
 
 // ── Passive: you browse your own saved-posts page ───────────────────────────────────
 
+/** When this tab last read the whole list because you opened your saved page. */
+let lastPageCheckAt = 0;
+const PAGE_CHECK_GAP_MS = 20_000;
+
+/**
+ * You opened your saved page: what it lists is the truth, both ways. New saves are added
+ * (`listPage`), and the whole list is read so posts no longer in it are removed, whichever
+ * device or tab they were unsaved in.
+ */
+function savedPageOpened() {
+  if (Date.now() - lastPageCheckAt < PAGE_CHECK_GAP_MS) return;
+  lastPageCheckAt = Date.now();
+  void checkWholeList().catch(() => undefined);
+}
+
 void session.then((info) => {
   if (info.mode !== 'passive') return;
   const readRendered = () => {
@@ -212,6 +244,7 @@ void session.then((info) => {
       remember(page.posts);
       if (page.posts.length > 0) runner.listPage({ posts: page.posts, hasMore: true });
     }
+    savedPageOpened();
   };
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', readRendered, { once: true });
@@ -357,9 +390,9 @@ listenToTap(LINKEDIN_TAP_TAG, ({ op, status, requestBody, json }) => {
     remember(page.posts);
     // Your own saved page, as you scroll it (sync sessions read the list themselves).
     void session.then((info) => {
-      if (info.mode === 'passive' && onSavedPage() && page.posts.length > 0) {
-        runner.listPage({ posts: page.posts, hasMore: true });
-      }
+      if (info.mode !== 'passive' || !onSavedPage()) return;
+      if (page.posts.length > 0) runner.listPage({ posts: page.posts, hasMore: true });
+      savedPageOpened();
     });
     return;
   }

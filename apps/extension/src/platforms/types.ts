@@ -71,6 +71,11 @@ export interface PlatformAdapter {
   scripts: { main: string; content: string };
   /** Background catch-up interval in minutes, randomised within [min, max]. */
   catchUpMinutes: readonly [number, number];
+  /**
+   * Run the scripts in the site's frames too, not only the top page: LinkedIn's feed opens
+   * "Saved items" inside a full-page iframe (`/preload/`), where Unsave is clicked.
+   */
+  allFrames?: boolean;
   /** Taught by the user ("Sync this list") rather than built in. */
   learned?: boolean;
 }

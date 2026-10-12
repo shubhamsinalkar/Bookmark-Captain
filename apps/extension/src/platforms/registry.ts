@@ -48,6 +48,7 @@ export const ADAPTERS: readonly PlatformAdapter[] = [
     syncUrl: LINKEDIN_SAVED_URL,
     scripts: { main: 'linkedin-main.js', content: 'linkedin-content.js' },
     catchUpMinutes: [30, 60],
+    allFrames: true,
   },
   {
     platform: 'youtube',

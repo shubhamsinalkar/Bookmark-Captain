@@ -220,18 +220,50 @@ export function registerPlatformScripts(): Promise<void> {
         js: [connector.scripts.main],
         runAt: 'document_start',
         world: 'MAIN',
+        allFrames: connector.allFrames === true,
       },
       {
         id: `${SCRIPT_ID_PREFIX}${connector.platform}:content`,
         matches: connector.matches,
         js: [connector.scripts.content],
         runAt: 'document_start',
+        allFrames: connector.allFrames === true,
       },
     ]);
     if (scripts.length > 0) await chrome.scripting.registerContentScripts(scripts);
   });
   scriptsQueue = run.catch(() => undefined);
   return run;
+}
+
+/**
+ * After the extension is installed, updated or reloaded, tabs that were already open keep
+ * their old content scripts, which can no longer reach the extension: saves made there would
+ * be missed until the tab is reloaded. Put the current scripts into those tabs. (The old
+ * network tap stays installed too; the new one wraps it, so the page is still served.)
+ */
+export async function injectIntoOpenTabs(): Promise<void> {
+  const state = await readState();
+  const active = connectors(state).filter(
+    (connector) => platformState(state, connector.platform).enabled,
+  );
+  for (const connector of active) {
+    const tabs = await chrome.tabs.query({ url: connector.matches });
+    for (const tab of tabs) {
+      if (tab.id === undefined || tab.discarded) continue;
+      const target = { tabId: tab.id, allFrames: connector.allFrames === true };
+      try {
+        await chrome.scripting.executeScript({
+          target,
+          files: [connector.scripts.main],
+          world: 'MAIN',
+        });
+        await chrome.scripting.executeScript({ target, files: [connector.scripts.content] });
+      } catch {
+        // The tab closed, or shows a page the extension may not access.
+      }
+    }
+  }
 }
 
 // ── Scheduling ───────────────────────────────────────────────────────────────────

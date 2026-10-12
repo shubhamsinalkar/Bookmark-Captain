@@ -15,6 +15,7 @@ import {
   handleProgress,
   handleRemoved,
   handleTabRemoved,
+  injectIntoOpenTabs,
   learnSite,
   rejectSite,
   requestRecheck,
@@ -50,7 +51,7 @@ chrome.runtime.onInstalled.addListener(() => {
   // Safety net: retry anything still queued even if no new events arrive.
   void chrome.alarms.create(PERIODIC_ALARM, { periodInMinutes: 30 });
   flush().catch(logFailure('flush'));
-  restorePlatforms().catch(logFailure('restore platforms'));
+  restorePlatforms().then(injectIntoOpenTabs).catch(logFailure('restore platforms'));
 });
 chrome.runtime.onStartup.addListener(() => {
   flush().catch(logFailure('flush'));
