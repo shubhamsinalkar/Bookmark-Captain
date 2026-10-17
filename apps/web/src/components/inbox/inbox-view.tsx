@@ -16,6 +16,7 @@ import { useLiveBookmarks } from '@/hooks/use-live-bookmarks';
 import {
   type BookmarkFilters,
   getBookmarkCounts,
+  listApiTokens,
   listBookmarks,
   queryKeys,
   searchByMeaning,
@@ -332,6 +333,14 @@ const EMPTY_VIEWS: Record<
 };
 
 function EmptyView({ view }: { view: BookmarkView }) {
+  // API tokens belong to connected extensions: offer connecting one only when there is none.
+  const tokens = useQuery({
+    queryKey: queryKeys.apiTokens,
+    queryFn: listApiTokens,
+    enabled: view === 'inbox',
+  });
+  const noExtension = tokens.isSuccess && tokens.data.length === 0;
+
   if (view !== 'inbox') {
     const empty = EMPTY_VIEWS[view];
     return (
@@ -351,9 +360,11 @@ function EmptyView({ view }: { view: BookmarkView }) {
       <Link href="/settings#platforms" className={buttonPrimary}>
         Connect a platform
       </Link>
-      <Link href="/extension/connect" className={buttonSecondary}>
-        Connect the Chrome extension
-      </Link>
+      {noExtension && (
+        <Link href="/extension/connect" className={buttonSecondary}>
+          Connect the Chrome extension
+        </Link>
+      )}
     </EmptyState>
   );
 }

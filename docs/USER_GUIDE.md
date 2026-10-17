@@ -248,6 +248,10 @@ extension). **Disconnect** there removes that browser's access.
 
 To disconnect Chrome completely: extension popup → **Disconnect this browser**.
 
+**Theme**: System (follows your device), Light or Dark. Switch it from the menu under your name
+(bottom left; top right on a phone) or **Settings → Appearance**. The choice is remembered per
+browser.
+
 ---
 
 ## 6. After the code changes (updates)
@@ -275,9 +279,9 @@ when you reload the extension.
 
 | You see                                                                           | What to do                                                                                                                                                                |
 | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Connect page says the extension isn't installed                                   | The page was open before installing: click **Check again** or reload the page                                                                                             |
+| Connect page says the extension isn't installed                                   | Each Chrome profile needs its own copy. If you just installed it, click **Reload page**                                                                                   |
 | Settings says the extension "isn't installed" right after reloading the extension | The tab was open during the reload: reload the page (F5)                                                                                                                  |
-| Popup not connected / "The access key was rejected"                               | Popup → **Connect account** → **Reconnect extension**                                                                                                                     |
+| Popup not connected / "The access key was rejected"                               | Popup → **Connect account** → **Connect extension** (or **Reconnect the extension** under "Not syncing?")                                                                 |
 | "Sign in to Reddit in this browser, then sync again" (or another platform)        | Log in to that site in this Chrome, then **Sync now**                                                                                                                     |
 | "… didn't load your saved posts"                                                  | Click **Sync now**. If it repeats, the site may have changed — see below                                                                                                  |
 | Nothing arrives at all                                                            | Is `pnpm dev` running? The popup's "waiting to sync" count shows what is queued                                                                                           |

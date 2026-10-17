@@ -72,32 +72,38 @@
   }
 }
 
+/*
+ * The theme (System / Light / Dark, see lib/theme.ts) is resolved before first paint by an
+ * inline script in the root layout, which sets `data-theme` on <html>. Everything dark keys
+ * off that attribute, never the media query, so a chosen theme overrides the device's.
+ */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
 @layer base {
   :root {
-    color-scheme: light dark;
+    color-scheme: light;
   }
 
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --color-paper: #0b0e13;
-      --color-surface: #12161d;
-      --color-sunken: #1a1f28;
-      --color-ink: #e9edf3;
-      --color-ink-soft: #9ba4b3;
-      --color-ink-faint: #667080;
-      --color-rule: #232934;
-      --color-rule-strong: #323a47;
-      --color-accent: #f08bd3;
-      --color-accent-wash: #33152c;
-      --color-focus: #f08bd3;
-      --color-danger: #ff8a80;
-      --color-danger-wash: #2c1719;
-      --color-caution: #f5c451;
-      --color-good: #6fd3a0;
-      --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3);
-      --shadow-lift: 0 2px 4px rgb(0 0 0 / 0.3), 0 18px 36px -14px rgb(0 0 0 / 0.65);
-      --shadow-float: 0 18px 40px -16px rgb(0 0 0 / 0.7), 0 2px 6px -2px rgb(0 0 0 / 0.5);
-    }
+  :root[data-theme='dark'] {
+    color-scheme: dark;
+    --color-paper: #0b0e13;
+    --color-surface: #12161d;
+    --color-sunken: #1a1f28;
+    --color-ink: #e9edf3;
+    --color-ink-soft: #9ba4b3;
+    --color-ink-faint: #667080;
+    --color-rule: #232934;
+    --color-rule-strong: #323a47;
+    --color-accent: #f08bd3;
+    --color-accent-wash: #33152c;
+    --color-focus: #f08bd3;
+    --color-danger: #ff8a80;
+    --color-danger-wash: #2c1719;
+    --color-caution: #f5c451;
+    --color-good: #6fd3a0;
+    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3);
+    --shadow-lift: 0 2px 4px rgb(0 0 0 / 0.3), 0 18px 36px -14px rgb(0 0 0 / 0.65);
+    --shadow-float: 0 18px 40px -16px rgb(0 0 0 / 0.7), 0 2px 6px -2px rgb(0 0 0 / 0.5);
   }
 
   html {
@@ -162,13 +168,11 @@
   --tint-base: 0.965;
   --tint-ink: 0.45;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --tint-hi: 0.34;
-    --tint-lo: 0.29;
-    --tint-base: 0.23;
-    --tint-ink: 0.86;
-  }
+:root[data-theme='dark'] {
+  --tint-hi: 0.34;
+  --tint-lo: 0.29;
+  --tint-base: 0.23;
+  --tint-ink: 0.86;
 }
 
 @utility cover-tint {
@@ -185,6 +189,39 @@
 @utility letter-tint {
   background: oklch(var(--tint-hi) 0.06 var(--hue));
   color: oklch(var(--tint-ink) 0.14 var(--hue));
+}
+
+/*
+ * The hero headline reads itself: each line starts in faint "unread" ink, then a reading pass
+ * fills it in from the left. The read ink deepens toward the accent at the baseline. The top
+ * layer is twice the line's width (transparent half, faint half), so sliding it uncovers the
+ * ink underneath. Set `--read-delay` per line. Reduced motion lands on the read state at once.
+ */
+@utility ink-read {
+  color: transparent;
+  background-image:
+    linear-gradient(90deg, transparent 45%, var(--color-ink-faint) 55%),
+    linear-gradient(
+      180deg,
+      var(--color-ink) 40%,
+      color-mix(in oklab, var(--color-ink), var(--color-accent) 45%)
+    );
+  background-size:
+    220% 100%,
+    100% 100%;
+  background-position:
+    0 0,
+    0 0;
+  background-clip: text;
+  animation: read-through 900ms var(--ease-out-quint) var(--read-delay, 0ms) both;
+}
+
+@keyframes read-through {
+  from {
+    background-position:
+      100% 0,
+      0 0;
+  }
 }
 
 /* Horizontal chip rows on phones scroll without showing a scrollbar. */
