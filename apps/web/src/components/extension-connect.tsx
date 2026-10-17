@@ -1,9 +1,9 @@
 'use client';
 
 import { useQueryClient } from '@tanstack/react-query';
-import { CircleCheck, LoaderCircle } from 'lucide-react';
+import { CircleCheck, LoaderCircle, RotateCw } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { BrandMark } from '@/components/ui/brand';
 import { PlatformLogo } from '@/components/ui/platform-logo';
 import { buttonPrimary, buttonSecondary, hint, pageTitle, panel } from '@/components/ui/styles';
@@ -14,6 +14,28 @@ const code = 'rounded-md bg-sunken px-1.5 py-0.5 text-[13px] text-ink';
 
 const DETECT_TIMEOUT_MS = 3000;
 const CONNECT_TIMEOUT_MS = 8000;
+
+const DEVELOPMENT = process.env.NODE_ENV === 'development';
+
+// Once the extension is on the Chrome Web Store, link its listing here.
+const INSTALL_STEPS: ReactNode[] = [<>Install the Bookmark Captain extension in this profile.</>];
+
+/** Local development: build and load the extension from the repo. */
+const DEV_INSTALL_STEPS: ReactNode[] = [
+  <>
+    Build it: <code className={code}>pnpm --filter @bc/extension build</code>
+  </>,
+  <>
+    Open <code className={code}>chrome://extensions</code> and turn on{' '}
+    <strong>Developer mode</strong>.
+  </>,
+  <>
+    Click <strong>Load unpacked</strong> and choose{' '}
+    <code className={code}>apps/extension/dist</code>.
+  </>,
+];
+
+const RELOAD_STEP: ReactNode = <>Reload this page.</>;
 
 type State =
   | { phase: 'detecting' }
@@ -79,6 +101,8 @@ export function ExtensionConnect() {
     }
   }
 
+  const linked = state.phase === 'connected' || (state.phase === 'ready' && state.alreadyConnected);
+
   return (
     <div className="mx-auto max-w-xl py-4 sm:py-10">
       <div className="flex items-center justify-center gap-3" aria-hidden>
@@ -89,7 +113,7 @@ export function ExtensionConnect() {
           {[0, 1, 2].map((dot) => (
             <span
               key={dot}
-              className={`size-1.5 rounded-full ${state.phase === 'connected' ? 'bg-good' : 'bg-rule-strong'}`}
+              className={`size-1.5 rounded-full ${linked ? 'bg-good' : 'bg-rule-strong'}`}
             />
           ))}
         </span>
@@ -97,10 +121,13 @@ export function ExtensionConnect() {
           <BrandMark size={44} />
         </span>
       </div>
-      <h1 className={`${pageTitle} mt-7 text-center`}>Connect the Chrome extension</h1>
+      <h1 className={`${pageTitle} mt-7 text-center`}>
+        {linked ? 'This browser is connected' : 'Connect the Chrome extension'}
+      </h1>
       <p className={`${hint} mx-auto mt-2 max-w-md text-center`}>
-        It imports your browser bookmarks, keeps them in sync, and reads the saved lists of X,
-        Reddit, Instagram, LinkedIn, YouTube and other sites.
+        {linked
+          ? 'Your browser bookmarks and the platforms you connect keep arriving in your inbox.'
+          : 'It imports your browser bookmarks, keeps them in sync, and reads the saved lists of X, Reddit, Instagram, LinkedIn, YouTube and other sites.'}
       </p>
 
       <section className={`${panel} mt-8 space-y-5 p-6 sm:p-7`} aria-live="polite">
@@ -114,52 +141,69 @@ export function ExtensionConnect() {
         {state.phase === 'missing' && (
           <>
             <p className="text-sm leading-relaxed">
-              The Bookmark Captain extension isn&apos;t installed in this browser (or this page was
-              open before it was installed).
+              The Bookmark Captain extension isn&apos;t installed in this Chrome profile. Each
+              Chrome profile needs its own copy.
             </p>
             <ol className="space-y-3 text-sm">
-              {[
-                <>
-                  Build it: <code className={code}>pnpm --filter @bc/extension build</code>
-                </>,
-                <>
-                  Open <code className={code}>chrome://extensions</code> and turn on{' '}
-                  <strong>Developer mode</strong>.
-                </>,
-                <>
-                  Click <strong>Load unpacked</strong> and choose{' '}
-                  <code className={code}>apps/extension/dist</code>.
-                </>,
-                <>Come back to this page and check again.</>,
-              ].map((step, index) => (
-                <li key={index} className="flex gap-3">
-                  <span className="grid size-6 shrink-0 place-items-center rounded-full bg-sunken text-xs font-semibold">
-                    {index + 1}
-                  </span>
-                  <span className="pt-0.5 text-ink-soft">{step}</span>
-                </li>
-              ))}
+              {[...(DEVELOPMENT ? DEV_INSTALL_STEPS : INSTALL_STEPS), RELOAD_STEP].map(
+                (step, index) => (
+                  <li key={index} className="flex gap-3">
+                    <span className="grid size-6 shrink-0 place-items-center rounded-full bg-sunken text-xs font-semibold">
+                      {index + 1}
+                    </span>
+                    <span className="pt-0.5 text-ink-soft">{step}</span>
+                  </li>
+                ),
+              )}
             </ol>
-            <button type="button" onClick={detectAgain} className={buttonSecondary}>
-              Check again
+            {/* Chrome only injects the extension's bridge while a page loads, so a fresh check
+                without reloading could never find a just-installed extension. */}
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className={buttonSecondary}
+            >
+              <RotateCw size={15} aria-hidden />
+              Reload page
             </button>
           </>
         )}
 
-        {state.phase === 'ready' && (
+        {state.phase === 'ready' && !state.alreadyConnected && (
           <>
             <p className="text-sm leading-relaxed">
-              {state.alreadyConnected
-                ? 'The extension is already connected. Reconnecting replaces its access key.'
-                : 'Extension found. Connect it to your account to start syncing bookmarks.'}
+              Extension found. Connect it to your account to start syncing bookmarks.
             </p>
             <button
               type="button"
               onClick={() => void connect()}
               className={`${buttonPrimary} w-full py-2.5`}
             >
-              {state.alreadyConnected ? 'Reconnect extension' : 'Connect extension'}
+              Connect extension
             </button>
+          </>
+        )}
+
+        {state.phase === 'ready' && state.alreadyConnected && (
+          <>
+            <p className="flex items-start gap-2.5 text-sm leading-relaxed">
+              <CircleCheck size={18} className="mt-0.5 shrink-0 text-good" aria-hidden />
+              Nothing to do here: new bookmarks and saves sync on their own.
+            </p>
+            <Link href="/inbox" className={`${buttonPrimary} w-full py-2.5`}>
+              Go to inbox
+            </Link>
+            <p className={`${hint} text-center`}>
+              Not syncing?{' '}
+              <button
+                type="button"
+                onClick={() => void connect()}
+                className="font-medium text-ink underline decoration-rule-strong underline-offset-2 hover:decoration-ink"
+              >
+                Reconnect the extension
+              </button>{' '}
+              to give it a new access key.
+            </p>
           </>
         )}
 

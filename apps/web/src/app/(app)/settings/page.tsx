@@ -5,6 +5,7 @@ import { ConnectedDevices } from '@/components/settings/connected-devices';
 import { PlatformConnections } from '@/components/settings/platform-connections';
 import { PlatformLogo } from '@/components/ui/platform-logo';
 import { buttonSecondary, hint, pageTitle, panel } from '@/components/ui/styles';
+import { ThemePicker } from '@/components/ui/theme-picker';
 
 export const metadata: Metadata = { title: 'Settings' };
 
@@ -74,6 +75,14 @@ export default function SettingsPage() {
         description="Extensions and apps that can add to your bookmarks. Disconnect any you don’t recognise."
       >
         <ConnectedDevices />
+      </Section>
+
+      <Section
+        id="appearance"
+        title="Appearance"
+        description="Light, dark, or match your device. Remembered in this browser."
+      >
+        <ThemePicker />
       </Section>
     </div>
   );

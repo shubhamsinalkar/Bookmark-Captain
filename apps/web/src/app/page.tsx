@@ -134,9 +134,16 @@ export default async function LandingPage() {
               </p>
               <h1
                 id="hero-title"
-                className="mt-6 font-display text-[clamp(3.25rem,8vw,5.75rem)] leading-[0.95] tracking-[-0.02em] text-balance"
+                className="mt-6 flex flex-col items-start font-display text-[clamp(3.25rem,8vw,5.75rem)] leading-[0.95] tracking-[-0.02em]"
               >
-                Read what you saved.
+                {/* Padding keeps ascenders and descenders inside the painted (text-clipped)
+                    background; the negative margin gives the space back (flex: no collapsing). */}
+                <span className="-my-[0.1em] ink-read py-[0.1em] [--read-delay:250ms]">
+                  Read what
+                </span>{' '}
+                <span className="-my-[0.1em] ink-read py-[0.1em] [--read-delay:700ms]">
+                  you saved.
+                </span>
               </h1>
               <p className="mt-6 max-w-md text-lg leading-relaxed text-ink-soft">
                 Bookmark Captain gathers your browser bookmarks, X bookmarks, Reddit and Instagram

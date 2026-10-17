@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Instrument_Sans, Instrument_Serif } from 'next/font/google';
 import type { ReactNode } from 'react';
+import { themeScript } from '@/lib/theme';
 import { Providers } from './providers';
 import './globals.css';
 
@@ -31,7 +32,15 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={`${instrumentSans.variable} ${instrumentSerif.variable}`}>
+    // The theme script sets `data-theme` on <html> before React hydrates.
+    <html
+      lang="en"
+      className={`${instrumentSans.variable} ${instrumentSerif.variable}`}
+      suppressHydrationWarning
+    >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className="min-h-dvh font-sans">
         <Providers>{children}</Providers>
       </body>

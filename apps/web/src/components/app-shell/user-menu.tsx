@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useRef, useState } from 'react';
 import { floating, menuItem } from '@/components/ui/styles';
+import { ThemePicker } from '@/components/ui/theme-picker';
 import { useDismiss } from '@/hooks/use-dismiss';
 import { apiFetch } from '@/lib/api/client';
 
@@ -107,6 +108,11 @@ export function UserMenu({ user, wide = false }: { user: User; wide?: boolean })
             <Puzzle size={15} className="text-ink-soft" aria-hidden />
             Connect the extension
           </Link>
+          <div className="my-1 h-px bg-rule" />
+          <div className="flex items-center justify-between gap-2 py-1 pr-1 pl-2.5">
+            <span className="text-sm text-ink">Theme</span>
+            <ThemePicker inMenu />
+          </div>
           <div className="my-1 h-px bg-rule" />
           <button
             type="button"
