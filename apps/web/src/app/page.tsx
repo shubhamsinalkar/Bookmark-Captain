@@ -138,10 +138,10 @@ export default async function LandingPage() {
               >
                 {/* Padding keeps ascenders and descenders inside the painted (text-clipped)
                     background; the negative margin gives the space back (flex: no collapsing). */}
-                <span className="-my-[0.1em] ink-read py-[0.1em] [--read-delay:250ms]">
+                <span className="my-[-0.1em] ink-read py-[0.1em] [--read-delay:250ms]">
                   Read what
                 </span>{' '}
-                <span className="-my-[0.1em] ink-read py-[0.1em] [--read-delay:700ms]">
+                <span className="my-[-0.1em] ink-read py-[0.1em] [--read-delay:700ms]">
                   you saved.
                 </span>
               </h1>
