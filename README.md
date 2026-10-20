@@ -3,6 +3,8 @@
 Every post you saved, on every platform, in one inbox — summarised, linked across platforms,
 and resurfaced so you actually use it.
 
+https://github.com/user-attachments/assets/8dd438a1-adcc-41dd-8c75-b49fd279c393
+
 **Using the app?** Read the [User Guide](docs/USER_GUIDE.md): setup, connecting platforms,
 the inbox, and troubleshooting.
 
