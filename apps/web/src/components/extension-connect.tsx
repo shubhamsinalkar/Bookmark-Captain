@@ -17,8 +17,34 @@ const CONNECT_TIMEOUT_MS = 8000;
 
 const DEVELOPMENT = process.env.NODE_ENV === 'development';
 
-// Once the extension is on the Chrome Web Store, link its listing here.
-const INSTALL_STEPS: ReactNode[] = [<>Install the Bookmark Captain extension in this profile.</>];
+const link =
+  'font-medium text-ink underline decoration-rule-strong underline-offset-2 hover:decoration-ink';
+
+/**
+ * The newest release's zip. GitHub redirects `latest/download/<asset>` to the current release,
+ * so this link stays valid as long as every release attaches a zip with this exact name.
+ * Once the extension is on the Chrome Web Store, link its listing here instead.
+ */
+const DOWNLOAD_URL =
+  'https://github.com/shubhamsinalkar/Bookmark-Captain/releases/latest/download/bookmark-captain-extension.zip';
+
+const INSTALL_STEPS: ReactNode[] = [
+  <>
+    <a href={DOWNLOAD_URL} className={link}>
+      Download the extension
+    </a>{' '}
+    and unzip it into a folder you&apos;ll keep. Chrome runs it from there, so don&apos;t delete it
+    later.
+  </>,
+  <>
+    Open <code className={code}>chrome://extensions</code> and turn on{' '}
+    <strong>Developer mode</strong> (top right).
+  </>,
+  <>
+    Click <strong>Load unpacked</strong> and choose the unzipped folder (the one that contains{' '}
+    <code className={code}>manifest.json</code>).
+  </>,
+];
 
 /** Local development: build and load the extension from the repo. */
 const DEV_INSTALL_STEPS: ReactNode[] = [
@@ -195,11 +221,7 @@ export function ExtensionConnect() {
             </Link>
             <p className={`${hint} text-center`}>
               Not syncing?{' '}
-              <button
-                type="button"
-                onClick={() => void connect()}
-                className="font-medium text-ink underline decoration-rule-strong underline-offset-2 hover:decoration-ink"
-              >
+              <button type="button" onClick={() => void connect()} className={link}>
                 Reconnect the extension
               </button>{' '}
               to give it a new access key.
