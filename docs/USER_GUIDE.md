@@ -16,6 +16,10 @@ It has three parts:
 
 ## 1. One-time setup
 
+> **Using the hosted app?** Skip 1.1 and 1.2: sign in with Google at
+> **https://app.bookmarkcaptain.me**, then continue with [1.3](#13-install-the-extension). The
+> `localhost` addresses in this guide are for running it on your own computer.
+
 ### 1.1 Start the app
 
 In a terminal, in the project folder:
@@ -63,10 +67,23 @@ Firewall when Windows asks.
 
 ### 1.3 Install the extension
 
-1. Open `chrome://extensions` in Chrome.
-2. Turn on **Developer mode** (top right).
-3. Click **Load unpacked** and choose the folder `apps/extension/dist` inside the project.
-4. Pin it: click the puzzle-piece icon in Chrome's toolbar → pin **Bookmark Captain**.
+The extension isn't on the Chrome Web Store yet, so it's installed by hand ("Load unpacked").
+
+1. Get the extension folder:
+   - **Hosted app:** download
+     [`bookmark-captain-extension.zip`](https://github.com/shubhamsinalkar/Bookmark-Captain/releases/latest/download/bookmark-captain-extension.zip)
+     from the [latest release](https://github.com/shubhamsinalkar/Bookmark-Captain/releases/latest)
+     and unzip it into a folder you'll keep. Chrome runs the extension from that folder: if
+     you delete or move it, the extension stops working.
+   - **Running it yourself:** use the folder `apps/extension/dist` inside the project.
+2. Open `chrome://extensions` in Chrome.
+3. Turn on **Developer mode** (top right).
+4. Click **Load unpacked** and choose the folder from step 1 (the one containing
+   `manifest.json`).
+5. Pin it: click the puzzle-piece icon in Chrome's toolbar → pin **Bookmark Captain**.
+
+Chrome may show a banner about developer-mode extensions. That's expected for extensions
+installed this way.
 
 ### 1.4 Connect the extension to your account
 
@@ -256,8 +273,13 @@ browser.
 
 ## 6. After the code changes (updates)
 
-`pnpm dev` rebuilds the extension automatically, but **Chrome doesn't load the new version on
-its own**:
+**Hosted app:** new extension versions don't install themselves. Download the newest
+[`bookmark-captain-extension.zip`](https://github.com/shubhamsinalkar/Bookmark-Captain/releases/latest/download/bookmark-captain-extension.zip),
+replace the contents of your extension folder with it, then follow the steps below. Your
+connection and settings are kept.
+
+**Running it yourself:** `pnpm dev` rebuilds the extension automatically, but **Chrome doesn't
+load the new version on its own**:
 
 1. `chrome://extensions` → click the **reload** icon (↻) on Bookmark Captain.
 2. **Reload any open X / Reddit / Instagram / LinkedIn / YouTube tabs** — tabs opened before the reload keep

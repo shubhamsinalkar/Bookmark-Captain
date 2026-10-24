@@ -5,6 +5,21 @@ and resurfaced so you actually use it.
 
 https://github.com/user-attachments/assets/8dd438a1-adcc-41dd-8c75-b49fd279c393
 
+## Try it
+
+1. Sign in with Google at **[app.bookmarkcaptain.me](https://app.bookmarkcaptain.me)**.
+2. Install the Chrome extension. It isn't on the Chrome Web Store yet, so it's installed by hand:
+   1. [Download `bookmark-captain-extension.zip`](https://github.com/shubhamsinalkar/Bookmark-Captain/releases/latest/download/bookmark-captain-extension.zip)
+      from the [latest release](https://github.com/shubhamsinalkar/Bookmark-Captain/releases/latest)
+      and unzip it into a folder you'll keep. Chrome runs the extension from that folder.
+   2. Open `chrome://extensions`, turn on **Developer mode** (top right), click **Load unpacked**
+      and choose the unzipped folder (the one containing `manifest.json`).
+3. Click the extension icon → **Connect account** → **Connect extension**. Your bookmarks start
+   arriving in the inbox.
+
+Updates don't install themselves yet: download the new zip, replace the folder's contents, and
+click the reload icon (↻) on Bookmark Captain in `chrome://extensions`.
+
 **Using the app?** Read the [User Guide](docs/USER_GUIDE.md): setup, connecting platforms,
 the inbox, and troubleshooting.
 
