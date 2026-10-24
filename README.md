@@ -3,6 +3,8 @@
 Every post you saved, on every platform, in one inbox — summarised, linked across platforms,
 and resurfaced so you actually use it.
 
+https://github.com/user-attachments/assets/8dd438a1-adcc-41dd-8c75-b49fd279c393
+
 ## Try it
 
 1. Sign in with Google at **[app.bookmarkcaptain.me](https://app.bookmarkcaptain.me)**.
