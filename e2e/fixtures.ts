@@ -3,6 +3,7 @@ import {
   chromium,
   expect,
   type Page,
+  request,
   test as base,
   type Worker,
 } from '@playwright/test';
@@ -55,10 +56,26 @@ export const test = base.extend<object, ExtensionFixtures>({
 
 export { expect };
 
-/** Signs in through the development login form. */
+export const E2E_PASSWORD = 'e2e password 123';
+
+/**
+ * Signs in through the email + password form. The account is created over the API first,
+ * from a separate request context so the browser's cookies are left alone (a 409 means it
+ * already exists, so the same email can sign in again in a later test).
+ */
 export async function signIn(page: Page, email: string): Promise<void> {
+  const api = await request.newContext({ extraHTTPHeaders: { origin: E2E.webUrl } });
+  const signup = await api.post(new URL('/auth/signup', E2E.apiUrl).toString(), {
+    data: { email, password: E2E_PASSWORD },
+  });
+  const status = signup.status();
+  const body = await signup.text();
+  await api.dispose();
+  if (status !== 201 && status !== 409) throw new Error(`Sign-up failed: ${status} ${body}`);
+
   await page.goto('/login');
   await page.getByLabel('Email').fill(email);
-  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.getByLabel('Password', { exact: true }).fill(E2E_PASSWORD);
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await page.waitForURL('**/inbox');
 }

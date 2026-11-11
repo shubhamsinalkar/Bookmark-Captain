@@ -1,8 +1,14 @@
-import { type AuthProviders, devLoginInputSchema } from '@bc/shared';
+import {
+  type AuthProviders,
+  devLoginInputSchema,
+  signInInputSchema,
+  signUpInputSchema,
+} from '@bc/shared';
 import { type Request, type Response, Router } from 'express';
 import { z } from 'zod';
 import type { AppContext } from '../../context';
 import { HttpError } from '../../lib/http-error';
+import { hashPassword, verifyAgainstDummy, verifyPassword } from '../../lib/password';
 import { generateToken, safeEqual } from '../../lib/tokens';
 import { createRateLimiter } from '../../middleware/rate-limit';
 import { toUserDto } from '../users/user.repository';
@@ -49,7 +55,11 @@ export function createAuthRouter(ctx: AppContext): Router {
   }
 
   router.get('/providers', (_req, res) => {
-    res.json({ google: google !== null, devLogin: env.AUTH_DEV_LOGIN } satisfies AuthProviders);
+    res.json({
+      google: google !== null,
+      password: true,
+      devLogin: env.AUTH_DEV_LOGIN,
+    } satisfies AuthProviders);
   });
 
   router.get('/google', (_req, res) => {
@@ -93,6 +103,45 @@ export function createAuthRouter(ctx: AppContext): Router {
     const user = await users.upsertFromGoogle(profile);
     await signIn(req, res, user.id);
     res.redirect(new URL('/inbox', env.WEB_URL).toString());
+  });
+
+  // Stricter than the router-wide limit: each attempt costs a slow hash, and guessing
+  // passwords is exactly what these limits stop. Sign-in counts only failed attempts, so
+  // someone who types their password correctly is never locked out.
+  const signUpLimiter = createRateLimiter({ windowMs: 15 * 60_000, limit: 20 });
+  const signInLimiter = createRateLimiter({ windowMs: 15 * 60_000, limit: 20, onlyFailures: true });
+
+  router.post('/signup', signUpLimiter, async (req, res) => {
+    const input = signUpInputSchema.parse(req.body);
+    const user = await users.createWithPassword({
+      email: input.email,
+      name: input.name,
+      passwordHash: await hashPassword(input.password),
+    });
+    if (!user) {
+      throw HttpError.conflict('An account with this email already exists', [
+        {
+          path: 'email',
+          message:
+            'An account with this email already exists. Sign in instead, or if you used Google, continue with Google and add a password in Settings.',
+        },
+      ]);
+    }
+    await signIn(req, res, user.id);
+    res.status(201).json({ user: toUserDto(user) });
+  });
+
+  router.post('/login', signInLimiter, async (req, res) => {
+    const input = signInInputSchema.parse(req.body);
+    const user = await users.findByEmail(input.email);
+    const valid = user?.passwordHash
+      ? await verifyPassword(input.password, user.passwordHash)
+      : await verifyAgainstDummy(input.password);
+    // One message for "no such account" and "wrong password", so nobody can probe for emails.
+    if (!user || !valid) throw HttpError.unauthorized('Incorrect email or password');
+
+    await signIn(req, res, user.id);
+    res.json({ user: toUserDto(user) });
   });
 
   router.post('/dev-login', async (req, res) => {

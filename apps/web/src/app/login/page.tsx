@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { DevLoginForm } from '@/components/dev-login-form';
+import { type AuthMode, PasswordAuthForm } from '@/components/password-auth-form';
 import { SourceStack } from '@/components/landing/source-stack';
 import { BrandMark } from '@/components/ui/brand';
 import { GoogleLogo } from '@/components/ui/google-logo';
@@ -9,7 +9,14 @@ import { buttonSecondary, hint, panel } from '@/components/ui/styles';
 import { getAuthProviders, getCurrentUser } from '@/lib/api/server';
 import { PUBLIC_API_URL } from '@/lib/config';
 
-export const metadata: Metadata = { title: 'Sign in' };
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ mode?: string | string[] }>;
+}): Promise<Metadata> {
+  const { mode } = await searchParams;
+  return { title: mode === 'signup' ? 'Create account' : 'Sign in' };
+}
 
 const ERROR_MESSAGES: Record<string, string> = {
   google_cancelled: 'Google sign-in was cancelled.',
@@ -21,11 +28,15 @@ const ERROR_MESSAGES: Record<string, string> = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string | string[] }>;
+  searchParams: Promise<{ error?: string | string[]; mode?: string | string[] }>;
 }) {
   if (await getCurrentUser()) redirect('/inbox');
 
-  const [{ error }, providers] = await Promise.all([searchParams, getAuthProviders()]);
+  const [{ error, mode: modeParam }, providers] = await Promise.all([
+    searchParams,
+    getAuthProviders(),
+  ]);
+  const mode: AuthMode = modeParam === 'signup' ? 'signup' : 'signin';
   const errorMessage =
     typeof error === 'string'
       ? (ERROR_MESSAGES[error] ?? 'Sign-in failed. Please try again.')
@@ -59,9 +70,13 @@ export default async function LoginPage({
           <header className="mb-8">
             <BrandMark size={44} className="mb-6" />
             <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">
-              Sign in to Bookmark Captain
+              {mode === 'signup' ? 'Create your account' : 'Sign in to Bookmark Captain'}
             </h1>
-            <p className={`${hint} mt-2`}>Every post you saved, on every platform, in one inbox.</p>
+            <p className={`${hint} mt-2`}>
+              {mode === 'signup'
+                ? 'Bring every saved post, from every platform, into one inbox.'
+                : 'Every post you saved, on every platform, in one inbox.'}
+            </p>
           </header>
 
           <div className={`${panel} space-y-5 p-6`}>
@@ -84,7 +99,7 @@ export default async function LoginPage({
               </a>
             )}
 
-            {providers.google && providers.devLogin && (
+            {providers.google && providers.password && (
               <div className="flex items-center gap-3 text-xs text-ink-soft">
                 <span className="h-px flex-1 bg-rule" />
                 or
@@ -92,9 +107,9 @@ export default async function LoginPage({
               </div>
             )}
 
-            {providers.devLogin && <DevLoginForm />}
+            {providers.password && <PasswordAuthForm key={mode} mode={mode} />}
 
-            {!providers.google && !providers.devLogin && (
+            {!providers.google && !providers.password && (
               <p className={`${hint} text-center`}>No sign-in method is configured.</p>
             )}
           </div>

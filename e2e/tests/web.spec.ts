@@ -1,3 +1,4 @@
+import { E2E } from '../env';
 import { expect, signIn, test } from '../fixtures';
 
 test('signed-out visitors are sent to the login page', async ({ page }) => {
@@ -61,4 +62,88 @@ test('import a bookmarks.html export and search it', async ({ page }) => {
   await page.getByLabel('Search or paste a link').fill('rust');
   await expect(page.getByRole('article')).toHaveCount(1);
   await expect(page.getByRole('link', { name: 'Rust ownership guide' })).toBeVisible();
+});
+
+test('create an account with email and password, then sign in again', async ({ page }) => {
+  await page.goto('/login');
+  await page.getByRole('link', { name: 'Create an account' }).click();
+  await expect(page).toHaveURL(/\/login\?mode=signup$/);
+  await expect(page.getByRole('heading', { name: 'Create your account' })).toBeVisible();
+
+  // Mistakes are shown next to the field they belong to, before anything is sent.
+  await page.getByLabel('Email').fill('not-an-email');
+  await page.getByLabel('Password', { exact: true }).fill('short');
+  await page.getByRole('button', { name: 'Create account' }).click();
+  await expect(page.getByText('Enter a valid email address')).toBeVisible();
+  await expect(page.getByText('Use at least 8 characters')).toBeVisible();
+
+  await page.getByLabel('Name').fill('Web Signup');
+  await page.getByLabel('Email').fill('Web-Signup@Example.com');
+  await page.getByLabel('Password', { exact: true }).fill('a long password');
+  await page.getByRole('button', { name: 'Show password' }).click();
+  await expect(page.getByLabel('Password', { exact: true })).toHaveAttribute('type', 'text');
+  await page.getByRole('button', { name: 'Create account' }).click();
+  await page.waitForURL('**/inbox');
+
+  // Signed out, the same email can't be registered twice...
+  await page.context().clearCookies();
+  await page.goto('/login?mode=signup');
+  await page.getByLabel('Email').fill('web-signup@example.com');
+  await page.getByLabel('Password', { exact: true }).fill('another password');
+  await page.getByRole('button', { name: 'Create account' }).click();
+  await expect(page.getByText('An account with this email already exists')).toBeVisible();
+
+  // ...a wrong password is refused...
+  await page.getByRole('link', { name: 'Sign in', exact: true }).click();
+  await page.getByLabel('Email').fill('web-signup@example.com');
+  await page.getByLabel('Password', { exact: true }).fill('wrong password');
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(page.getByText('Incorrect email or password')).toBeVisible();
+
+  // ...and the right one gets back in.
+  await page.getByLabel('Password', { exact: true }).fill('a long password');
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await page.waitForURL('**/inbox');
+});
+
+test('an account without a password adds one in Settings, then changes it', async ({ page }) => {
+  // Stand-in for an account made with Google: it exists but has no password.
+  await page.request.post(new URL('/auth/dev-login', E2E.apiUrl).toString(), {
+    data: { email: 'google-only@example.com' },
+    headers: { origin: E2E.webUrl },
+  });
+
+  await page.goto('/settings');
+  const section = page.locator('#password');
+  await expect(section.getByText('Your account has no password yet')).toBeVisible();
+  await section.getByLabel('Password', { exact: true }).fill('short');
+  await section.getByRole('button', { name: 'Set password' }).click();
+  await expect(section.getByText('Use at least 8 characters')).toBeVisible();
+
+  await section.getByLabel('Password', { exact: true }).fill('first password');
+  await section.getByRole('button', { name: 'Set password' }).click();
+  await expect(section.getByText('Password set.')).toBeVisible();
+  // The section now offers a change instead.
+  await expect(section.getByRole('button', { name: 'Change password' })).toBeVisible();
+
+  // A wrong current password is refused without signing us out...
+  await section.getByLabel('Current password').fill('not it');
+  await section.getByLabel('New password').fill('second password');
+  await section.getByRole('button', { name: 'Change password' }).click();
+  await expect(section.getByText('Current password is incorrect')).toBeVisible();
+  await expect(page).toHaveURL(/\/settings$/);
+
+  // ...the right one works.
+  await section.getByLabel('Current password').fill('first password');
+  await section.getByLabel('New password').fill('second password');
+  await section.getByRole('button', { name: 'Change password' }).click();
+  await expect(section.getByText('Password changed.')).toBeVisible();
+
+  // Signed out, the new password signs in.
+  await page.context().clearCookies();
+  await page.goto('/login');
+  await page.getByLabel('Email').fill('google-only@example.com');
+  await page.getByLabel('Password', { exact: true }).fill('second password');
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await page.waitForURL('**/inbox');
 });

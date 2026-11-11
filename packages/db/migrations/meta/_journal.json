@@ -29,6 +29,13 @@
       "when": 1791398107722,
       "tag": "0003_ai_enrichment",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794374174241,
+      "tag": "0004_user_passwords",
+      "breakpoints": true
     }
   ]
 }

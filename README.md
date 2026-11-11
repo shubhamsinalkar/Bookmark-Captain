@@ -7,7 +7,8 @@ https://github.com/user-attachments/assets/8dd438a1-adcc-41dd-8c75-b49fd279c393
 
 ## Try it
 
-1. Sign in with Google at **[app.bookmarkcaptain.me](https://app.bookmarkcaptain.me)**.
+1. Sign in at **[app.bookmarkcaptain.me](https://app.bookmarkcaptain.me)** with Google, or create an
+   account with your email and a password.
 2. Install the Chrome extension. It isn't on the Chrome Web Store yet, so it's installed by hand:
    1. [Download `bookmark-captain-extension.zip`](https://github.com/shubhamsinalkar/Bookmark-Captain/releases/latest/download/bookmark-captain-extension.zip)
       from the [latest release](https://github.com/shubhamsinalkar/Bookmark-Captain/releases/latest)
@@ -68,7 +69,7 @@ pnpm db:migrate               # apply migrations to DATABASE_URL
 pnpm dev                      # API on :4000, web on :3000, extension rebuilt on change
 ```
 
-Open http://localhost:3000 and use **Development sign-in** (any email) — no Google setup needed
+Open http://localhost:3000 and click **Create an account** (email + password) — no Google setup needed
 locally.
 
 ### Install the Chrome extension (development)
@@ -149,6 +150,11 @@ Point your host's health check at `/healthz` (process liveness, no database acce
 - The extension receives its token via `window.postMessage` on the web app's own connect page;
   the background worker only accepts it from that exact origin and path.
 - Google OAuth uses the Authorization Code flow with PKCE and a `state` check.
+- Passwords are hashed with scrypt (per-user salt, cost stored with the hash) and never stored or
+  logged in plain text. Sign-in answers "Incorrect email or password" for both unknown emails
+  and wrong passwords, with equal timing, and failed attempts are rate limited. Password sign-up
+  doesn't verify the email, so when Google later proves who owns that email, the password is
+  removed and its sessions are ended.
 - CSRF: `SameSite=Lax` plus an `Origin` allow-list on every cookie-authenticated state change.
 - Helmet security headers, strict CORS (web origin only), per-IP rate limits, body size limits.
 - Configuration is validated at startup; the API refuses to boot with invalid or unsafe settings
