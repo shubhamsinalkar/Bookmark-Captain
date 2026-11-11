@@ -1,5 +1,5 @@
 import { type Database, type UserRow, sessions, users } from '@bc/db';
-import { eq } from 'drizzle-orm';
+import { and, eq, ne } from 'drizzle-orm';
 import { generateToken, sha256Hex } from '../../lib/tokens';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -66,6 +66,13 @@ export function createSessionService(db: Database, ttlDays: number) {
 
     async revoke(token: string): Promise<void> {
       await db.delete(sessions).where(eq(sessions.id, sha256Hex(token)));
+    },
+
+    /** Signs the user out everywhere except the session holding `keepToken`. */
+    async revokeOthers(userId: string, keepToken: string): Promise<void> {
+      await db
+        .delete(sessions)
+        .where(and(eq(sessions.userId, userId), ne(sessions.id, sha256Hex(keepToken))));
     },
   };
 }

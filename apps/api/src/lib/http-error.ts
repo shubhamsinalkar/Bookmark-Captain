@@ -22,12 +22,16 @@ export class HttpError extends Error {
     return new HttpError(401, 'unauthorized', message);
   }
 
-  static forbidden(message = 'Forbidden') {
-    return new HttpError(403, 'forbidden', message);
+  static forbidden(message = 'Forbidden', details?: unknown) {
+    return new HttpError(403, 'forbidden', message, details);
   }
 
   static notFound(message = 'Not found') {
     return new HttpError(404, 'not_found', message);
+  }
+
+  static conflict(message: string, details?: unknown) {
+    return new HttpError(409, 'conflict', message, details);
   }
 
   static serviceUnavailable(message: string) {
