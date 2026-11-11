@@ -64,7 +64,11 @@ test('import a bookmarks.html export and search it', async ({ page }) => {
   await expect(page.getByRole('link', { name: 'Rust ownership guide' })).toBeVisible();
 });
 
-test('create an account with email and password, then sign in again', async ({ page }) => {
+test('create an account with email and password, then sign in again', async ({
+  page,
+}, testInfo) => {
+  // A fresh address on every attempt: a retry must not trip over the account the first try made.
+  const email = `web-signup-${testInfo.retry}-${testInfo.repeatEachIndex}@example.com`;
   await page.goto('/login');
   await page.getByRole('link', { name: 'Create an account' }).click();
   await expect(page).toHaveURL(/\/login\?mode=signup$/);
@@ -78,7 +82,7 @@ test('create an account with email and password, then sign in again', async ({ p
   await expect(page.getByText('Use at least 8 characters')).toBeVisible();
 
   await page.getByLabel('Name').fill('Web Signup');
-  await page.getByLabel('Email').fill('Web-Signup@Example.com');
+  await page.getByLabel('Email').fill(email.toUpperCase());
   await page.getByLabel('Password', { exact: true }).fill('a long password');
   await page.getByRole('button', { name: 'Show password' }).click();
   await expect(page.getByLabel('Password', { exact: true })).toHaveAttribute('type', 'text');
@@ -88,14 +92,16 @@ test('create an account with email and password, then sign in again', async ({ p
   // Signed out, the same email can't be registered twice...
   await page.context().clearCookies();
   await page.goto('/login?mode=signup');
-  await page.getByLabel('Email').fill('web-signup@example.com');
+  await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password', { exact: true }).fill('another password');
   await page.getByRole('button', { name: 'Create account' }).click();
   await expect(page.getByText('An account with this email already exists')).toBeVisible();
 
   // ...a wrong password is refused...
   await page.getByRole('link', { name: 'Sign in', exact: true }).click();
-  await page.getByLabel('Email').fill('web-signup@example.com');
+  // The form is swapped for the sign-in one: wait for it, or typing lands in the old form.
+  await expect(page.getByRole('heading', { name: 'Sign in to Bookmark Captain' })).toBeVisible();
+  await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password', { exact: true }).fill('wrong password');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByText('Incorrect email or password')).toBeVisible();
@@ -106,10 +112,13 @@ test('create an account with email and password, then sign in again', async ({ p
   await page.waitForURL('**/inbox');
 });
 
-test('an account without a password adds one in Settings, then changes it', async ({ page }) => {
+test('an account without a password adds one in Settings, then changes it', async ({
+  page,
+}, testInfo) => {
+  const email = `google-only-${testInfo.retry}-${testInfo.repeatEachIndex}@example.com`;
   // Stand-in for an account made with Google: it exists but has no password.
   await page.request.post(new URL('/auth/dev-login', E2E.apiUrl).toString(), {
-    data: { email: 'google-only@example.com' },
+    data: { email },
     headers: { origin: E2E.webUrl },
   });
 
@@ -142,7 +151,7 @@ test('an account without a password adds one in Settings, then changes it', asyn
   // Signed out, the new password signs in.
   await page.context().clearCookies();
   await page.goto('/login');
-  await page.getByLabel('Email').fill('google-only@example.com');
+  await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password', { exact: true }).fill('second password');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await page.waitForURL('**/inbox');

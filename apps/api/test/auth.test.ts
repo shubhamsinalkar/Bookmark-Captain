@@ -35,9 +35,13 @@ describe('GET /auth/providers', () => {
     expect(res.body).toEqual({ google: false, password: true, devLogin: true });
   });
 
-  it('rate limits auth endpoints', async () => {
-    for (let i = 0; i < 30; i++) await request(app).get('/auth/providers').expect(200);
-    const res = await request(app).get('/auth/providers').expect(429);
+  it('is not rate limited: the web server asks for it on every login page view', async () => {
+    for (let i = 0; i < 40; i++) await request(app).get('/auth/providers').expect(200);
+  });
+
+  it('rate limits the other auth endpoints', async () => {
+    for (let i = 0; i < 30; i++) await request(app).post('/auth/logout').expect(204);
+    const res = await request(app).post('/auth/logout').expect(429);
     expect(res.body.error.code).toBe('rate_limited');
   });
 });

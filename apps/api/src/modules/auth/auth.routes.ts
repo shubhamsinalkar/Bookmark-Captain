@@ -34,6 +34,17 @@ export function createAuthRouter(ctx: AppContext): Router {
   const { env, google, sessions, users } = ctx;
   const router = Router();
 
+  // Before the limiter: it only reports configuration, and the web app's server asks for it on
+  // every visit to /login. Those requests all come from that one server, so counting them
+  // would lock everyone out of the login page once ~30 people opened it within a minute.
+  router.get('/providers', (_req, res) => {
+    res.json({
+      google: google !== null,
+      password: true,
+      devLogin: env.AUTH_DEV_LOGIN,
+    } satisfies AuthProviders);
+  });
+
   router.use(createRateLimiter({ windowMs: 60_000, limit: 30 }));
 
   /** Starts a session for the user, replacing any session the browser already had. */
@@ -53,14 +64,6 @@ export function createAuthRouter(ctx: AppContext): Router {
     url.searchParams.set('error', error);
     res.redirect(url.toString());
   }
-
-  router.get('/providers', (_req, res) => {
-    res.json({
-      google: google !== null,
-      password: true,
-      devLogin: env.AUTH_DEV_LOGIN,
-    } satisfies AuthProviders);
-  });
 
   router.get('/google', (_req, res) => {
     if (!google) throw HttpError.serviceUnavailable('Google sign-in is not configured');
