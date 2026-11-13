@@ -32,12 +32,16 @@ function fakeIdToken(claims: Record<string, unknown>): string {
 describe('GET /auth/providers', () => {
   it('lists enabled sign-in methods', async () => {
     const res = await request(app).get('/auth/providers').expect(200);
-    expect(res.body).toEqual({ google: false, devLogin: true });
+    expect(res.body).toEqual({ google: false, password: true, devLogin: true });
   });
 
-  it('rate limits auth endpoints', async () => {
-    for (let i = 0; i < 30; i++) await request(app).get('/auth/providers').expect(200);
-    const res = await request(app).get('/auth/providers').expect(429);
+  it('is not rate limited: the web server asks for it on every login page view', async () => {
+    for (let i = 0; i < 40; i++) await request(app).get('/auth/providers').expect(200);
+  });
+
+  it('rate limits the other auth endpoints', async () => {
+    for (let i = 0; i < 30; i++) await request(app).post('/auth/logout').expect(204);
+    const res = await request(app).post('/auth/logout').expect(429);
     expect(res.body.error.code).toBe('rate_limited');
   });
 });
@@ -110,6 +114,139 @@ describe('session lifecycle (dev login)', () => {
     expect(findCookie(res, SESSION_COOKIE_NAME)).toBeDefined();
     const [row] = await harness.db.select().from(sessions);
     expect(row!.expiresAt.getTime()).toBeGreaterThan(soon.getTime());
+  });
+});
+
+describe('email and password', () => {
+  const ada = { email: 'Ada@Example.com', password: 'correct horse', name: 'Ada' };
+
+  it('signs up, starts a session, and stores only a hash of the password', async () => {
+    const agent = request.agent(app);
+    const res = await agent.post('/auth/signup').send(ada).expect(201);
+    expect(res.body.user).toMatchObject({ email: 'ada@example.com', name: 'Ada' });
+    expect(res.body.user).not.toHaveProperty('passwordHash');
+    expect(findCookie(res, SESSION_COOKIE_NAME)).toMatch(/HttpOnly/i);
+
+    const me = await agent.get('/me').expect(200);
+    expect(me.body.user.id).toBe(res.body.user.id);
+
+    const [row] = await harness.db.select().from(users);
+    expect(row!.passwordHash).toMatch(/^scrypt\$/);
+    expect(row!.passwordHash).not.toContain('correct horse');
+  });
+
+  it('refuses a second account with the same email, whatever its case', async () => {
+    await request(app).post('/auth/signup').send(ada).expect(201);
+    const res = await request(app)
+      .post('/auth/signup')
+      .send({ ...ada, email: '  ADA@example.COM ', password: 'another password' })
+      .expect(409);
+    expect(res.body.error.code).toBe('conflict');
+    expect(res.body.error.details).toEqual([
+      {
+        path: 'email',
+        message: expect.stringContaining('An account with this email already exists') as string,
+      },
+    ]);
+    expect(await harness.db.select().from(users)).toHaveLength(1);
+  });
+
+  it('refuses to sign up over an email that already signed in another way', async () => {
+    await request(app).post('/auth/dev-login').send({ email: 'ada@example.com' }).expect(200);
+    await request(app).post('/auth/signup').send(ada).expect(409);
+  });
+
+  it('keeps emails unique even when two sign-ups race', async () => {
+    const results = await Promise.all([
+      request(app).post('/auth/signup').send(ada),
+      request(app).post('/auth/signup').send(ada),
+    ]);
+    expect(results.map((r) => r.status).sort()).toEqual([201, 409]);
+    expect(await harness.db.select().from(users)).toHaveLength(1);
+  });
+
+  it.each([
+    ['an invalid email', { email: 'ada@' }, 'email'],
+    ['a short password', { password: 'short' }, 'password'],
+    ['a password of spaces', { password: '          ' }, 'password'],
+    ['a blank name', { name: '  ' }, 'name'],
+    ['a missing password', { password: undefined }, 'password'],
+  ])('rejects sign-up with %s', async (_label, override, path) => {
+    const res = await request(app)
+      .post('/auth/signup')
+      .send({ ...ada, ...override })
+      .expect(400);
+    expect(res.body.error.code).toBe('validation_error');
+    expect(res.body.error.details).toEqual([{ path, message: expect.any(String) }]);
+    expect(await harness.db.select().from(users)).toHaveLength(0);
+  });
+
+  it('signs in with the right password, ignoring the case of the email', async () => {
+    await request(app).post('/auth/signup').send(ada).expect(201);
+
+    const agent = request.agent(app);
+    const res = await agent
+      .post('/auth/login')
+      .send({ email: 'ADA@example.com', password: 'correct horse' })
+      .expect(200);
+    expect(res.body.user.email).toBe('ada@example.com');
+    await agent.get('/me').expect(200);
+  });
+
+  it('gives the same answer for a wrong password and an unknown email', async () => {
+    await request(app).post('/auth/signup').send(ada).expect(201);
+    // An account that exists but has no password (it signed in another way).
+    await request(app).post('/auth/dev-login').send({ email: 'grace@example.com' }).expect(200);
+
+    for (const attempt of [
+      { email: 'ada@example.com', password: 'wrong horse' },
+      { email: 'nobody@example.com', password: 'correct horse' },
+      { email: 'grace@example.com', password: 'correct horse' },
+    ]) {
+      const res = await request(app).post('/auth/login').send(attempt).expect(401);
+      expect(res.body.error).toEqual({
+        code: 'unauthorized',
+        message: 'Incorrect email or password',
+      });
+      expect(findCookie(res, SESSION_COOKIE_NAME)).toBeUndefined();
+    }
+  });
+
+  it('validates the sign-in body', async () => {
+    const res = await request(app)
+      .post('/auth/login')
+      .send({ email: 'ada@example.com', password: '' })
+      .expect(400);
+    expect(res.body.error.details).toEqual([{ path: 'password', message: 'Enter your password' }]);
+  });
+
+  it('slows down password guessing', async () => {
+    for (let i = 0; i < 20; i++) {
+      await request(app).post('/auth/login').send({ email: 'a@example.com', password: 'guess' });
+    }
+    const res = await request(app)
+      .post('/auth/login')
+      .send({ email: 'a@example.com', password: 'guess' })
+      .expect(429);
+    expect(res.body.error.code).toBe('rate_limited');
+  });
+
+  it('never counts successful sign-ins toward that limit', async () => {
+    await request(app).post('/auth/signup').send(ada).expect(201);
+    for (let i = 0; i < 21; i++) {
+      await request(app)
+        .post('/auth/login')
+        .send({ email: ada.email, password: ada.password })
+        .expect(200);
+    }
+  });
+
+  it('blocks cross-origin sign-up', async () => {
+    await request(app)
+      .post('/auth/signup')
+      .set('origin', 'https://evil.example')
+      .send(ada)
+      .expect(403);
   });
 });
 
@@ -227,6 +364,43 @@ describe('Google sign-in', () => {
     const me = await agent.get('/me').expect(200);
     expect(me.body.user.id).toBe(existing.body.user.id);
     expect(await harness.db.select().from(users)).toHaveLength(1);
+  });
+
+  it('removes an unverified password once Google proves who owns the email', async () => {
+    // Someone signs up with Grace's address before Grace ever uses the app.
+    const squatter = request.agent(googleApp);
+    await squatter
+      .post('/auth/signup')
+      .send({ email: 'grace@example.com', password: 'squatter password' })
+      .expect(201);
+
+    const grace = request.agent(googleApp);
+    const { state } = await startGoogleFlow(grace);
+    mockGoogleTokenEndpoint({});
+    await grace.get('/auth/google/callback').query({ code: 'abc', state }).expect(302);
+
+    await grace.get('/me').expect(200);
+    await squatter.get('/me').expect(401);
+    await request(googleApp)
+      .post('/auth/login')
+      .send({ email: 'grace@example.com', password: 'squatter password' })
+      .expect(401);
+    const [row] = await harness.db.select().from(users);
+    expect(row!.passwordHash).toBeNull();
+  });
+
+  it('keeps the password of an account already linked to Google', async () => {
+    const agent = request.agent(googleApp);
+    const { state } = await startGoogleFlow(agent);
+    mockGoogleTokenEndpoint({});
+    await agent.get('/auth/google/callback').query({ code: 'abc', state }).expect(302);
+    await harness.db.update(users).set({ passwordHash: 'scrypt$kept' });
+
+    const again = await startGoogleFlow(agent);
+    mockGoogleTokenEndpoint({});
+    await agent.get('/auth/google/callback').query({ code: 'abc', state: again.state }).expect(302);
+    const [row] = await harness.db.select().from(users);
+    expect(row!.passwordHash).toBe('scrypt$kept');
   });
 
   it('rejects a callback whose state does not match', async () => {

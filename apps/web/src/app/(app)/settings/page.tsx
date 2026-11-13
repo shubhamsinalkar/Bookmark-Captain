@@ -1,11 +1,14 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { ConnectedDevices } from '@/components/settings/connected-devices';
+import { PasswordSettings } from '@/components/settings/password-settings';
 import { PlatformConnections } from '@/components/settings/platform-connections';
 import { PlatformLogo } from '@/components/ui/platform-logo';
 import { buttonSecondary, hint, pageTitle, panel } from '@/components/ui/styles';
 import { ThemePicker } from '@/components/ui/theme-picker';
+import { getCurrentUser } from '@/lib/api/server';
 
 export const metadata: Metadata = { title: 'Settings' };
 
@@ -34,7 +37,10 @@ function Section({
   );
 }
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  const user = await getCurrentUser();
+  if (!user) redirect('/login');
+
   return (
     <div className="max-w-5xl">
       <header className="pb-8">
@@ -75,6 +81,14 @@ export default function SettingsPage() {
         description="Extensions and apps that can add to your bookmarks. Disconnect any you don’t recognise."
       >
         <ConnectedDevices />
+      </Section>
+
+      <Section
+        id="password"
+        title="Password"
+        description={`Sign in with ${user.email} and a password, as well as with Google.`}
+      >
+        <PasswordSettings email={user.email} hasPassword={user.hasPassword} />
       </Section>
 
       <Section

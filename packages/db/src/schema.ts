@@ -38,6 +38,11 @@ export const users = pgTable('users', {
   avatarUrl: text(),
   /** Google's stable account id (`sub` claim). Null for users who never signed in with Google. */
   googleSub: text().unique('users_google_sub_unique'),
+  /**
+   * scrypt hash of the user's password (format in `apps/api/src/lib/password.ts`).
+   * Null for users who only sign in with Google.
+   */
+  passwordHash: text(),
   ...timestamps,
 });
 

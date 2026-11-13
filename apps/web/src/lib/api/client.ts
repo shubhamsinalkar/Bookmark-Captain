@@ -4,12 +4,20 @@ import { PUBLIC_API_URL } from '../config';
 export class ApiError extends Error {
   readonly status: number;
   readonly code: ErrorCode | 'network_error';
+  /** Extra information from the API, e.g. `[{ path, message }]` for validation errors. */
+  readonly details: unknown;
 
-  constructor(status: number, code: ErrorCode | 'network_error', message: string) {
+  constructor(
+    status: number,
+    code: ErrorCode | 'network_error',
+    message: string,
+    details?: unknown,
+  ) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.code = code;
+    this.details = details;
   }
 }
 
@@ -42,7 +50,7 @@ export async function apiFetch<T>(
   const body: unknown = await response.json().catch(() => null);
   if (!response.ok) {
     if (isApiErrorBody(body)) {
-      throw new ApiError(response.status, body.error.code, body.error.message);
+      throw new ApiError(response.status, body.error.code, body.error.message, body.error.details);
     }
     throw new ApiError(response.status, 'internal_error', 'Unexpected server response');
   }

@@ -16,8 +16,8 @@ It has three parts:
 
 ## 1. One-time setup
 
-> **Using the hosted app?** Skip 1.1 and 1.2: sign in with Google at
-> **https://app.bookmarkcaptain.me**, then continue with [1.3](#13-install-the-extension). The
+> **Using the hosted app?** Skip 1.1 and 1.2: sign in at **https://app.bookmarkcaptain.me**
+> (Google, or email and password — see 1.2), then continue with [1.3](#13-install-the-extension). The
 > `localhost` addresses in this guide are for running it on your own computer.
 
 ### 1.1 Start the app
@@ -37,8 +37,26 @@ extension (the popup shows "N waiting to sync") and are sent when it is back.
 
 ### 1.2 Sign in
 
-Open **http://localhost:3000** and sign in (locally: **Development sign-in** with any email,
-no password).
+Open **http://localhost:3000**. The sign-in page is the same as on the hosted app:
+
+- **Continue with Google**, or
+- **Email and password.** The first time, click **Create an account** under the form, enter your
+  email and a password of at least 8 characters (name is optional), then **Create account**.
+  After that, sign in with the same email and password.
+
+Good to know:
+
+- One email = one account. Signing up with an email that already has an account says so; sign
+  in instead.
+- An account made with Google has no password at first. To add one, sign in with Google, open
+  **Settings → Password**, type a password and click **Set password**. From then on both ways open
+  the same account. The same place changes it later (it asks for the current one first, and signs
+  out your other devices).
+- If you made a password account and later use **Continue with Google** with the same email,
+  the two become one account and **the password is removed** (Google proved the email is
+  yours; the password never did). From then on, use Google.
+- There is no "forgot password" yet. If you forget it, use **Continue with Google** with the same
+  email (Gmail addresses), which signs you in to the same account.
 
 ### Open it on your phone (same Wi-Fi)
 
@@ -56,13 +74,13 @@ start the API and website with the computer's network address instead of `pnpm d
    $env:NEXT_PUBLIC_API_URL = 'http://192.168.29.227:4000'; pnpm --filter @bc/web dev
    ```
 
-3. On the phone **and** on the computer, open **http://192.168.29.227:3000** and sign in with
-   the same email as usual. `localhost:3000` doesn't work while it runs this way, and the
+3. On the phone **and** on the computer, open **http://192.168.29.227:3000** and sign in as
+   usual. `localhost:3000` doesn't work while it runs this way, and the
    Settings page can't see the extension (syncing itself keeps working).
 
 When you're done, stop both and go back to `pnpm dev`. While it runs this way, anyone on the
-same Wi-Fi who opens that address can use Development sign-in, which has no password: only do
-this on a network you trust. If the phone can't connect, allow Node.js through Windows
+same Wi-Fi can reach your API, which still accepts the passwordless development sign-in used by
+the tests (`AUTH_DEV_LOGIN=true`): only do this on a network you trust. If the phone can't connect, allow Node.js through Windows
 Firewall when Windows asks.
 
 ### 1.3 Install the extension
@@ -270,6 +288,9 @@ and **Esc** clears the selection.
 
 **Settings → Connected devices** lists the browsers connected to your account (the Chrome
 extension). **Disconnect** there removes that browser's access.
+
+**Settings → Password** adds a password to your account (if you only used Google so far) or
+changes it. Changing it asks for the current password and signs out your other devices.
 
 To disconnect Chrome completely: extension popup → **Disconnect this browser**.
 
