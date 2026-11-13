@@ -1,4 +1,4 @@
-import { expect, signIn, test } from '../fixtures';
+import { connectExtension, expect, signIn, test } from '../fixtures';
 
 /**
  * A stand-in for www.linkedin.com, served by Playwright: the Voyager API's saved-posts list
@@ -111,9 +111,7 @@ test('LinkedIn: connecting imports your saved posts, then new saves sync live', 
   ]);
   const page = await extensionContext.newPage();
   await signIn(page, 'linkedin-connector@example.com');
-  await page.goto('/extension/connect');
-  await page.getByRole('button', { name: /connect extension/i }).click();
-  await expect(page.getByText(/^Connected\./)).toBeVisible();
+  await connectExtension(page);
 
   // Connect LinkedIn from Settings: the extension opens the saved-posts page and reads the list.
   await page.goto('/settings');

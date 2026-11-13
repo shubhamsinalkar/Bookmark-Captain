@@ -4,6 +4,7 @@ import type { SyncOutcome } from '../platforms/types';
 import {
   confirmSite,
   connectorForOrigin,
+  connectorForRelatedOrigin,
   connectPlatform,
   disconnectAllPlatforms,
   disconnectPlatform,
@@ -114,7 +115,8 @@ const OUTCOMES = new Set<SyncOutcome>([
  * Who may send what:
  *  - `connect` hands over a credential: only the web app's connect page.
  *  - Platform page messages (captured posts, sessions, learned recipes): only from a tab on
- *    that connector's own site, i.e. our content script running there.
+ *    that connector's own site, i.e. our content script running there. A connector's related
+ *    sites (newsletters on *.substack.com) may only ask for a re-check.
  *  - `site:learn` starts reading a new site: only the extension's popup.
  *  - Everything else (status, sync, connect/disconnect a platform): the popup and the web
  *    app, never a platform page.
@@ -125,8 +127,11 @@ async function isTrustedSender(message: RuntimeRequest, sender: chrome.runtime.M
   if (PLATFORM_PAGE_REQUESTS.has(message.type)) {
     if (sender.tab === undefined) return false;
     const connector = await connectorForOrigin(sender.origin);
-    if (!connector) return false;
-    return !('platform' in message) || message.platform === connector.platform;
+    if (connector) return !('platform' in message) || message.platform === connector.platform;
+    // A related site (a newsletter on *.substack.com) can't read the saved list: it may only
+    // ask for the list to be read again.
+    if (message.type !== 'platform:recheck') return false;
+    return connectorForRelatedOrigin(sender.origin)?.platform === message.platform;
   }
   if (message.type === 'site:learn') return fromExtensionPage;
   const fromWebApp = sender.origin === WEB_ORIGIN;

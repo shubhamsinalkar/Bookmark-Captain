@@ -2,6 +2,11 @@ import type { Platform } from '@bc/shared';
 import { INSTAGRAM_ORIGIN, INSTAGRAM_SYNC_URL } from './instagram/constants';
 import { LINKEDIN_ORIGIN, LINKEDIN_SAVED_URL } from './linkedin/constants';
 import { REDDIT_ORIGIN, REDDIT_SAVED_URL } from './reddit/constants';
+import {
+  SUBSTACK_ORIGIN,
+  SUBSTACK_PUBLICATION_ORIGIN,
+  SUBSTACK_SAVED_URL,
+} from './substack/constants';
 import type { PlatformAdapter } from './types';
 import { WATCH_LATER_URL, YOUTUBE_ORIGIN } from './youtube/constants';
 
@@ -58,6 +63,17 @@ export const ADAPTERS: readonly PlatformAdapter[] = [
     syncUrl: WATCH_LATER_URL,
     scripts: { main: 'youtube-main.js', content: 'youtube-content.js' },
     catchUpMinutes: [30, 60],
+  },
+  {
+    platform: 'substack',
+    label: 'Substack',
+    origin: SUBSTACK_ORIGIN,
+    // substack.com holds the saved list; each newsletter's own site has a Save button too.
+    matches: [`${SUBSTACK_ORIGIN}/*`, 'https://*.substack.com/*'],
+    syncUrl: SUBSTACK_SAVED_URL,
+    scripts: { main: 'substack-main.js', content: 'substack-content.js' },
+    catchUpMinutes: [30, 60],
+    relatedOrigins: SUBSTACK_PUBLICATION_ORIGIN,
   },
 ];
 

@@ -19,6 +19,8 @@ export interface TapMessage {
   [TAP_MESSAGE_KEY]: string;
   /** Operation name chosen by the connector, e.g. the GraphQL operation "Bookmarks". */
   op: string;
+  /** Upper case, e.g. POST or DELETE: Substack saves and unsaves at the same address. */
+  method: string;
   status: number;
   /** The request body as text, for string and form bodies (mutations carry their variables here). */
   requestBody?: string;
@@ -87,6 +89,12 @@ export interface TapOptions {
   gated?: boolean;
 }
 
+/** The request a response answered: the connector's operation name and the method. */
+interface Call {
+  op: string;
+  method: string;
+}
+
 /** Main world: forwards responses whose URL `operationOf` recognises. */
 export function installNetworkTap(
   tag: string,
@@ -97,11 +105,12 @@ export function installNetworkTap(
   const buffer: TapMessage[] = [];
   const deliver = (message: TapMessage) => window.postMessage(message, window.location.origin);
 
-  const emit = (op: string, status: number, requestBody: unknown, json: unknown) => {
+  const emit = ({ op, method }: Call, status: number, requestBody: unknown, json: unknown) => {
     const body = bodyText(requestBody);
     const message: TapMessage = {
       [TAP_MESSAGE_KEY]: tag,
       op,
+      method,
       status,
       json,
       ...(body !== undefined && body.length <= MAX_REQUEST_BODY && { requestBody: body }),
@@ -114,7 +123,7 @@ export function installNetworkTap(
    * their JSON otherwise (Instagram's GraphQL: text/html). Passed on with the answer if it
    * is JSON after all, and without it (null) if not: the request still says what happened.
    */
-  const emitUnlabelled = (op: string, status: number, requestBody: unknown, text: string) => {
+  const emitUnlabelled = (call: Call, status: number, requestBody: unknown, text: string) => {
     if (bodyText(requestBody) === undefined) return;
     let json: unknown = null;
     try {
@@ -122,17 +131,17 @@ export function installNetworkTap(
     } catch {
       // Not JSON: the request alone.
     }
-    emit(op, status, requestBody, json);
+    emit(call, status, requestBody, json);
   };
-  const emitText = (op: string, status: number, requestBody: unknown, text: string) => {
+  const emitText = (call: Call, status: number, requestBody: unknown, text: string) => {
     if (text.length > MAX_JSON_CHARS) return;
     // A mutation may answer with an empty body: its request is what matters.
     if (text.trim() === '') {
-      if (bodyText(requestBody) !== undefined) emit(op, status, requestBody, null);
+      if (bodyText(requestBody) !== undefined) emit(call, status, requestBody, null);
       return;
     }
     try {
-      emit(op, status, requestBody, parseJson(text));
+      emit(call, status, requestBody, parseJson(text));
     } catch {
       // Not JSON: ignore.
     }
@@ -163,12 +172,14 @@ export function installNetworkTap(
 
   window.fetch = async function (...args: Parameters<typeof fetch>): Promise<Response> {
     let op: string | null = null;
+    let method = 'GET';
     let requestBody: Promise<unknown> = Promise.resolve(undefined);
     let hasBody = false;
     try {
       const [input, init] = args;
       const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
       op = mode === 'off' ? null : operationOf(url);
+      method = (init?.method ?? (input instanceof Request ? input.method : 'GET')).toUpperCase();
       if (op && init?.body !== undefined && init.body !== null) {
         if (init.body instanceof ReadableStream) {
           // A streamed body can be read once: the page's request gets one copy, we the other.
@@ -198,14 +209,14 @@ export function installNetworkTap(
     const response = await nativeFetch.apply(window, args);
     if (!op || mode === 'off') return response;
     try {
-      const operation = op;
+      const call: Call = { op, method };
       const labelledJson = !NOT_JSON.test(response.headers.get('content-type') ?? '');
       if (labelledJson || hasBody) {
         void Promise.all([response.clone().text(), requestBody])
           .then(([text, body]) =>
             labelledJson
-              ? emitText(operation, response.status, body, text)
-              : emitUnlabelled(operation, response.status, body, text),
+              ? emitText(call, response.status, body, text)
+              : emitUnlabelled(call, response.status, body, text),
           )
           .catch(() => undefined);
       }
@@ -215,17 +226,18 @@ export function installNetworkTap(
     return response;
   };
 
-  const urls = new WeakMap<XMLHttpRequest, string>();
+  const opened = new WeakMap<XMLHttpRequest, { method: string; url: string }>();
 
   proto.open = function (this: XMLHttpRequest, ...args: unknown[]) {
-    urls.set(this, String(args[1]));
+    opened.set(this, { method: String(args[0]).toUpperCase(), url: String(args[1]) });
     return (nativeOpen as (...a: unknown[]) => void).apply(this, args);
   };
 
   proto.send = function (this: XMLHttpRequest, body?: Document | XMLHttpRequestBodyInit | null) {
-    const url = urls.get(this);
-    const op = mode !== 'off' && url ? operationOf(url) : null;
-    if (op) {
+    const request = opened.get(this);
+    const op = mode !== 'off' && request ? operationOf(request.url) : null;
+    if (op && request) {
+      const call: Call = { op, method: request.method };
       const requestBody = readBody(body).catch(() => undefined);
       this.addEventListener('load', () => {
         try {
@@ -234,10 +246,10 @@ export function installNetworkTap(
           const json: unknown = responseType === 'json' ? this.response : undefined;
           const labelledJson = !NOT_JSON.test(this.getResponseHeader('content-type') ?? '');
           void requestBody.then((decoded) => {
-            if (!labelledJson) emitUnlabelled(op, status, decoded, text);
-            else if (responseType === 'json') emit(op, status, decoded, json);
+            if (!labelledJson) emitUnlabelled(call, status, decoded, text);
+            else if (responseType === 'json') emit(call, status, decoded, json);
             else if (responseType === '' || responseType === 'text') {
-              emitText(op, status, decoded, text);
+              emitText(call, status, decoded, text);
             }
           });
         } catch {
@@ -257,7 +269,7 @@ export function listenToTap(tag: string, handler: (message: TapMessage) => void)
     const data = event.data as Partial<TapMessage> | null;
     if (typeof data !== 'object' || data === null) return;
     if (data[TAP_MESSAGE_KEY] !== tag || typeof data.op !== 'string') return;
-    if (typeof data.status !== 'number') return;
+    if (typeof data.method !== 'string' || typeof data.status !== 'number') return;
     handler(data as TapMessage);
   });
 }

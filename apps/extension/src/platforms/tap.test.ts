@@ -50,11 +50,22 @@ describe('installNetworkTap', () => {
     expect(posted).toEqual([
       expect.objectContaining({
         op: 'graphql',
+        method: 'POST',
         status: 200,
         requestBody: 'a=1',
         json: { ok: true },
       }),
     ]);
+  });
+
+  it('names the method, however the request is made', async () => {
+    // Substack saves (POST) and unsaves (DELETE) at the same address.
+    const posted = page(() => Response.json({}));
+    await window.fetch('/graphql', { method: 'delete', body: '{"post_id":1}' });
+    await window.fetch(new Request('https://site.test/graphql', { method: 'DELETE' }));
+    await window.fetch('/graphql');
+    await vi.waitFor(() => expect(posted).toHaveLength(3));
+    expect(posted.map((message) => message.method)).toEqual(['DELETE', 'DELETE', 'GET']);
   });
 
   it('passes on a mutation whose JSON answer is labelled otherwise', async () => {

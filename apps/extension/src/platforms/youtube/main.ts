@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const message: TapMessage = {
     [TAP_MESSAGE_KEY]: YOUTUBE_TAP_TAG,
     op: 'initial',
+    method: 'GET',
     status: 200,
     json,
   };

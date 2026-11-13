@@ -22,6 +22,7 @@ export function isCapturedPost(value: unknown): value is CapturedPost {
     optionalString(post.text) &&
     optionalString(post.thumbnailUrl) &&
     optionalString(post.postedAt) &&
+    optionalString(post.savedAt) &&
     (post.metadata === undefined ||
       (typeof post.metadata === 'object' &&
         post.metadata !== null &&
@@ -51,6 +52,9 @@ export function unlistedIds(
   return missing;
 }
 
+const isDate = (value: string | undefined): value is string =>
+  value !== undefined && Number.isFinite(Date.parse(value));
+
 export interface CaptureContext {
   /** Ids already sent from this platform. */
   known: ReadonlySet<string>;
@@ -66,8 +70,9 @@ export interface CaptureContext {
 }
 
 /**
- * Captured posts → ingest items. Platforms like X don't say *when* you saved a post, so
- * `savedAt` is inferred:
+ * Captured posts → ingest items. A platform that says when you saved a post (Substack) sets
+ * the post's own `savedAt`, which is used as it is. Platforms like X don't say, so `savedAt`
+ * is inferred:
  *  - already sent before: omitted (the server keeps the original date anyway);
  *  - a live Save click: now;
  *  - listed above a post that was already sent: now. Saved lists put the newest saves
@@ -90,16 +95,14 @@ export function capturedToItems(
   const savedSinceLastRead = new Set(firstKnown > 0 ? order.slice(0, firstKnown) : []);
   const newIds: string[] = [];
   const items = posts.map((post, index): IngestItem => {
-    const { postedAt, ...fields } = post;
+    const { postedAt, savedAt: givenSavedAt, ...fields } = post;
     if (known.has(post.externalId)) return { platform, ...fields };
     newIds.push(post.externalId);
-    const savedAt =
-      datedByPost &&
-      !savedSinceLastRead.has(post.externalId) &&
-      postedAt &&
-      Number.isFinite(Date.parse(postedAt))
-        ? postedAt
-        : new Date(now - index).toISOString();
+    let savedAt: string;
+    if (isDate(givenSavedAt)) savedAt = new Date(givenSavedAt).toISOString();
+    else if (datedByPost && !savedSinceLastRead.has(post.externalId) && isDate(postedAt)) {
+      savedAt = postedAt;
+    } else savedAt = new Date(now - index).toISOString();
     return { platform, ...fields, savedAt };
   });
   return { items, newIds };

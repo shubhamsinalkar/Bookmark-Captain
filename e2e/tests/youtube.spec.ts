@@ -1,4 +1,4 @@
-import { expect, signIn, test } from '../fixtures';
+import { connectExtension, expect, signIn, test } from '../fixtures';
 
 /**
  * A stand-in for www.youtube.com, served by Playwright: a Watch later page that embeds its
@@ -114,9 +114,7 @@ test('YouTube: connecting imports Watch later, then changes sync live and on eve
   await extensionContext.clearCookies();
   const page = await extensionContext.newPage();
   await signIn(page, 'youtube-connector@example.com');
-  await page.goto('/extension/connect');
-  await page.getByRole('button', { name: /connect extension/i }).click();
-  await expect(page.getByText(/^Connected\./)).toBeVisible();
+  await connectExtension(page);
 
   // Connect YouTube from Settings: the extension opens Watch later and reads it.
   await page.goto('/settings');

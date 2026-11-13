@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { expect, signIn, test } from '../fixtures';
+import { connectExtension, expect, signIn, test } from '../fixtures';
 
 const fixture = (name: string) =>
   readFileSync(
@@ -63,9 +63,7 @@ test('X: connecting imports your bookmarks, then new saves sync live', async ({
   await extensionContext.clearCookies();
   const page = await extensionContext.newPage();
   await signIn(page, 'x-connector@example.com');
-  await page.goto('/extension/connect');
-  await page.getByRole('button', { name: /connect extension/i }).click();
-  await expect(page.getByText(/^Connected\./)).toBeVisible();
+  await connectExtension(page);
 
   // Connect X from Settings: the extension opens x.com/i/bookmarks and imports it.
   await page.goto('/settings');

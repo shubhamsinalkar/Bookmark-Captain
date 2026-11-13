@@ -1,4 +1,4 @@
-import { expect, signIn, test } from '../fixtures';
+import { connectExtension, expect, signIn, test } from '../fixtures';
 
 /**
  * A stand-in for www.instagram.com, served by Playwright: the web API's saved feed and media
@@ -86,9 +86,7 @@ test('Instagram: connecting imports your saved posts, then new saves sync live',
   await extensionContext.clearCookies();
   const page = await extensionContext.newPage();
   await signIn(page, 'instagram-connector@example.com');
-  await page.goto('/extension/connect');
-  await page.getByRole('button', { name: /connect extension/i }).click();
-  await expect(page.getByText(/^Connected\./)).toBeVisible();
+  await connectExtension(page);
 
   // Connect Instagram from Settings: the extension opens Instagram and reads the saved list.
   await page.goto('/settings');
