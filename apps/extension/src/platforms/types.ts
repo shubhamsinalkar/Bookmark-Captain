@@ -15,6 +15,8 @@ export interface CapturedPost {
   thumbnailUrl?: string;
   /** When the post was published (not when it was saved). */
   postedAt?: string;
+  /** When the user saved it, for the few platforms that say so (Substack). */
+  savedAt?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -76,6 +78,12 @@ export interface PlatformAdapter {
    * "Saved items" inside a full-page iframe (`/preload/`), where Unsave is clicked.
    */
   allFrames?: boolean;
+  /**
+   * Other sites of the same platform whose pages may only ask for the saved list to be read
+   * again, after a save there: every newsletter on `*.substack.com`. Their scripts can't
+   * read the list themselves (it lives on `origin`, which they may not fetch from).
+   */
+  relatedOrigins?: RegExp;
   /** Taught by the user ("Sync this list") rather than built in. */
   learned?: boolean;
 }

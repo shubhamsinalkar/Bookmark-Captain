@@ -91,11 +91,13 @@ export function PlatformConnections() {
     return (
       <div className="flex flex-wrap items-center gap-5 rounded-2xl border border-dashed border-rule-strong bg-surface/60 p-5">
         <div className="flex -space-x-2">
-          {(['x', 'reddit', 'instagram', 'linkedin', 'youtube'] as const).map((platform) => (
-            <span key={platform} className="rounded-[11px] ring-2 ring-paper">
-              <PlatformLogo platform={platform} size={36} />
-            </span>
-          ))}
+          {(['x', 'reddit', 'instagram', 'linkedin', 'youtube', 'substack'] as const).map(
+            (platform) => (
+              <span key={platform} className="rounded-[11px] ring-2 ring-paper">
+                <PlatformLogo platform={platform} size={36} />
+              </span>
+            ),
+          )}
         </div>
         <div className="min-w-[12rem] flex-1">
           <p className="text-sm font-medium">

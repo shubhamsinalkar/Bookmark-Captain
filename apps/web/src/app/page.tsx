@@ -40,6 +40,10 @@ const SOURCES: { platform: Platform; label?: string; body: string }[] = [
     body: 'Your Watch later playlist comes in, and every video you add to it follows.',
   },
   {
+    platform: 'substack',
+    body: 'Saved articles and notes come in, dated by when you saved them, and new saves follow.',
+  },
+  {
     platform: 'manual',
     label: 'Any link',
     body: 'Paste a link into the inbox and it is saved, tidied and summarised.',
@@ -53,6 +57,7 @@ const HERO_LOGOS: Platform[] = [
   'instagram',
   'youtube',
   'linkedin',
+  'substack',
   'github',
 ];
 
@@ -147,8 +152,8 @@ export default async function LandingPage() {
               </h1>
               <p className="mt-6 max-w-md text-lg leading-relaxed text-ink-soft">
                 Bookmark Captain gathers your browser bookmarks, X bookmarks, Reddit and Instagram
-                saves and YouTube Watch later into one inbox, where you read them, snooze them, or
-                clear them out.
+                saves, YouTube Watch later and Substack into one inbox, where you read them, snooze
+                them, or clear them out.
               </p>
               <div className="mt-9 flex flex-wrap items-center gap-3">
                 <Link href={cta.href} className={`${buttonPrimary} h-12 px-6 text-[15px]`}>

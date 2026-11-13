@@ -228,9 +228,9 @@ async function render(): Promise<void> {
         el(
           'div',
           { className: 'logo-row' },
-          ...(['browser', 'x', 'reddit', 'instagram', 'linkedin', 'youtube'] as const).map((id) =>
-            logo(id, 30),
-          ),
+          ...(
+            ['browser', 'x', 'reddit', 'instagram', 'linkedin', 'youtube', 'substack'] as const
+          ).map((id) => logo(id, 30)),
         ),
         el('p', { text: 'Connect your account to sync your bookmarks into your inbox.' }),
         ...(status.lastError ? [el('p', { className: 'error', text: status.lastError })] : []),

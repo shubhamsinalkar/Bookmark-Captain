@@ -95,6 +95,12 @@ export async function connectorForOrigin(origin: string | undefined) {
   return connectors(await readState()).find((connector) => connector.origin === origin);
 }
 
+/** The connector a related site belongs to (a newsletter's own *.substack.com site). */
+export function connectorForRelatedOrigin(origin: string | undefined) {
+  if (!origin) return undefined;
+  return ADAPTERS.find((adapter) => adapter.relatedOrigins?.test(origin));
+}
+
 // ── Sync sessions (tabs the extension opened), kept in session storage ───────────────
 // Session storage survives service-worker restarts and is cleared when the browser closes.
 

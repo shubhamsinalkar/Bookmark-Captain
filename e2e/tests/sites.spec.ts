@@ -1,5 +1,5 @@
 import { E2E } from '../env';
-import { expect, signIn, test } from '../fixtures';
+import { connectExtension, expect, signIn, test } from '../fixtures';
 
 /**
  * A site the extension has no code for: its own page, its own API and data shape. The test
@@ -99,9 +99,7 @@ test('any site: taught from its saved page, confirmed from a preview, then synce
   await extensionContext.clearCookies();
   const app = await extensionContext.newPage();
   await signIn(app, 'sites@example.com');
-  await app.goto('/extension/connect');
-  await app.getByRole('button', { name: /connect extension/i }).click();
-  await expect(app.getByText(/^Connected\./)).toBeVisible();
+  await connectExtension(app);
 
   const site = await extensionContext.newPage();
   await site.goto(`${SITE}/me/saved`);

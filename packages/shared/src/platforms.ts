@@ -14,6 +14,7 @@ export const KNOWN_PLATFORMS = [
   'linkedin',
   'reddit',
   'youtube',
+  'substack',
   'github',
   'manual',
 ] as const;
@@ -29,6 +30,7 @@ export const PLATFORM_LABELS: Record<KnownPlatform, string> = {
   linkedin: 'LinkedIn',
   reddit: 'Reddit',
   youtube: 'YouTube',
+  substack: 'Substack',
   github: 'GitHub',
   manual: 'Added manually',
 };
@@ -42,7 +44,13 @@ const KNOWN_DOMAINS: Record<string, KnownPlatform> = {
   'reddit.com': 'reddit',
   'old.reddit.com': 'reddit',
   'youtube.com': 'youtube',
+  'substack.com': 'substack',
   'github.com': 'github',
+};
+
+/** Platforms whose users each get their own subdomain, e.g. a newsletter on substack.com. */
+const KNOWN_PARENT_DOMAINS: Record<string, KnownPlatform> = {
+  'substack.com': 'substack',
 };
 
 const DOMAIN = /^(?=.{3,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z][a-z0-9-]{0,62}$/;
@@ -61,7 +69,10 @@ export function isPlatformId(value: string): boolean {
 /** The platform for a site's hostname, e.g. "www.instagram.com" → "instagram". */
 export function platformForHost(hostname: string): Platform {
   const host = hostname.toLowerCase().replace(/^(?:www|m|mobile)\./, '');
-  return KNOWN_DOMAINS[host] ?? host;
+  const known = KNOWN_DOMAINS[host];
+  if (known) return known;
+  const parent = host.slice(host.indexOf('.') + 1);
+  return KNOWN_PARENT_DOMAINS[parent] ?? host;
 }
 
 /** Display name: "Instagram" for known platforms, the domain itself for other sites. */

@@ -10,6 +10,14 @@ describe('platformForHost', () => {
     expect(platformForHost('WWW.LinkedIn.com')).toBe('linkedin');
   });
 
+  it('maps every newsletter on substack.com to Substack', () => {
+    expect(platformForHost('substack.com')).toBe('substack');
+    expect(platformForHost('hnasr.substack.com')).toBe('substack');
+    // Only direct subdomains: a deeper or look-alike host is just a site.
+    expect(platformForHost('a.b.substack.com')).toBe('a.b.substack.com');
+    expect(platformForHost('notsubstack.com')).toBe('notsubstack.com');
+  });
+
   it('uses the domain for any other site', () => {
     expect(platformForHost('www.pinterest.com')).toBe('pinterest.com');
     expect(platformForHost('news.ycombinator.com')).toBe('news.ycombinator.com');

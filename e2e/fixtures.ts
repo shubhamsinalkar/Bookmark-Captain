@@ -56,6 +56,17 @@ export const test = base.extend<object, ExtensionFixtures>({
 
 export { expect };
 
+/**
+ * Connects the extension to the signed-in account. The browser profile is shared between
+ * tests, so the extension may still hold an earlier test's key: the page then offers
+ * "Reconnect the extension" instead of "Connect extension", which does the same.
+ */
+export async function connectExtension(page: Page): Promise<void> {
+  await page.goto('/extension/connect');
+  await page.getByRole('button', { name: /^(re)?connect (the )?extension$/i }).click();
+  await expect(page.getByText(/^Connected\./)).toBeVisible();
+}
+
 export const E2E_PASSWORD = 'e2e password 123';
 
 /**

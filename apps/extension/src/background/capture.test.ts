@@ -110,6 +110,25 @@ describe('capturedToItems', () => {
     expect(items[0]!.savedAt).toBe(new Date(NOW).toISOString());
   });
 
+  it('uses the save time a platform gives, however the post was found', () => {
+    const saved = { ...post('s1'), savedAt: '2026-09-20T17:49:57.168Z' };
+    for (const via of ['sync', 'live'] as const) {
+      const { items } = capturedToItems(
+        'substack',
+        [saved],
+        context({ via, fullImportDone: true }),
+      );
+      expect(items[0]!.savedAt).toBe('2026-09-20T17:49:57.168Z');
+    }
+    // A post sent before keeps its date; an unreadable one falls back to the usual rules.
+    expect(
+      capturedToItems('substack', [saved], context({ known: new Set(['s1']) })).items[0],
+    ).not.toHaveProperty('savedAt');
+    expect(
+      capturedToItems('substack', [{ ...saved, savedAt: 'soon' }], context()).items[0]!.savedAt,
+    ).toBe('2025-01-01T00:00:00.000Z');
+  });
+
   it('leaves the date of already-sent posts alone', () => {
     const { items, newIds } = capturedToItems(
       'x',
@@ -132,6 +151,7 @@ describe('isCapturedPost', () => {
     expect(isCapturedPost({ ...post('1'), url: 'javascript:alert(1)' })).toBe(false);
     expect(isCapturedPost({ ...post('1'), externalId: '' })).toBe(false);
     expect(isCapturedPost({ ...post('1'), title: 42 })).toBe(false);
+    expect(isCapturedPost({ ...post('1'), savedAt: 1758390597168 })).toBe(false);
     expect(isCapturedPost({ ...post('1'), metadata: ['x'] })).toBe(false);
     expect(isCapturedPost(null)).toBe(false);
   });

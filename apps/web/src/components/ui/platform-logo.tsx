@@ -120,7 +120,15 @@ export function PlatformLogo({
 }
 
 /** Platforms whose own logo says more than the linked site's icon would. */
-const POST_PLATFORMS = new Set(['x', 'reddit', 'instagram', 'youtube', 'linkedin', 'github']);
+const POST_PLATFORMS = new Set([
+  'x',
+  'reddit',
+  'instagram',
+  'youtube',
+  'linkedin',
+  'substack',
+  'github',
+]);
 
 /**
  * The icon for one bookmark: the platform's logo for posts (an X post, a Reddit thread), or the

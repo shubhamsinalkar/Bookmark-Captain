@@ -1,4 +1,4 @@
-import { expect, signIn, test } from '../fixtures';
+import { connectExtension, expect, signIn, test } from '../fixtures';
 
 /**
  * A stand-in for www.reddit.com, served by Playwright: Reddit's JSON listings for the saved
@@ -84,9 +84,7 @@ test('Reddit: connecting imports your saved list, then new saves sync live', asy
   await extensionContext.clearCookies();
   const page = await extensionContext.newPage();
   await signIn(page, 'reddit-connector@example.com');
-  await page.goto('/extension/connect');
-  await page.getByRole('button', { name: /connect extension/i }).click();
-  await expect(page.getByText(/^Connected\./)).toBeVisible();
+  await connectExtension(page);
 
   // Connect Reddit from Settings: the extension opens your saved page and reads the list.
   await page.goto('/settings');

@@ -1,8 +1,8 @@
 # Bookmark Captain — User Guide
 
 Bookmark Captain collects everything you save — Chrome bookmarks, X bookmarks, Reddit,
-Instagram and LinkedIn saves, YouTube Watch later — into **one inbox**, where you read it, snooze it, or
-clear it out.
+Instagram, LinkedIn and Substack saves, YouTube Watch later — into **one inbox**, where you read
+it, snooze it, or clear it out.
 
 It has three parts:
 
@@ -154,6 +154,12 @@ platform as **Connected · N posts synced**.
 | **Instagram** | Saved posts, reels and carousels   | The save (ribbon) icon under a post                               |
 | **LinkedIn**  | Saved posts                        | **Save** in a post's ⋯ menu                                       |
 | **YouTube**   | Your **Watch later** playlist      | The clock (Watch later) button, the ⋯ menu, or Save → Watch later |
+| **Substack**  | Saved **articles and notes**       | The bookmark icon on an article, or **Save** in a note's ⋯ menu   |
+
+**Substack: saved links aren't imported.** Substack's **Saved → Links** tab is broken on
+Substack's side: while any link is saved there, Substack's own Saved page fails to load. So the
+extension reads only **Posts** and **Notes**. Your articles and notes still sync while a link is
+saved.
 
 ### Any other site (experimental)
 
@@ -172,15 +178,17 @@ structure (not your posts) and is what's needed to fix it.
 
 ## 3. How new saves arrive
 
-| You do this (in Chrome)                       | It shows up in your inbox                       |
-| --------------------------------------------- | ----------------------------------------------- |
-| Add, edit or remove a Chrome bookmark         | Within seconds                                  |
-| Save a post on X, Reddit, Instagram, LinkedIn | Within seconds                                  |
-| Add a video to YouTube Watch later            | Within seconds                                  |
-| **Unsave** it (or remove from Watch later)    | It is removed from your inbox within seconds    |
-| Save something **on your phone**              | At the next check: every 30–60 min, Chrome open |
-| Open your saved page / Watch later yourself   | Right away (counts as a check)                  |
-| Can't wait                                    | Click **Sync now** (Settings or popup)          |
+| You do this (in Chrome)                               | It shows up in your inbox                       |
+| ----------------------------------------------------- | ----------------------------------------------- |
+| Add, edit or remove a Chrome bookmark                 | Within seconds                                  |
+| Save a post on X, Reddit, Instagram, LinkedIn         | Within seconds                                  |
+| Add a video to YouTube Watch later                    | Within seconds                                  |
+| Save an article or note on **substack.com**           | Within seconds                                  |
+| Save it on a newsletter's own site (`….substack.com`) | Within about a minute                           |
+| **Unsave** it (or remove from Watch later)            | It is removed from your inbox within seconds    |
+| Save something **on your phone**                      | At the next check: every 30–60 min, Chrome open |
+| Open your saved page / Watch later yourself           | Right away (counts as a check)                  |
+| Can't wait                                            | Click **Sync now** (Settings or popup)          |
 
 Background checks only happen **while Chrome is open** on this computer. Saves made while it is
 closed come in at the first check after you open it.
@@ -303,7 +311,7 @@ connection and settings are kept.
 load the new version on its own**:
 
 1. `chrome://extensions` → click the **reload** icon (↻) on Bookmark Captain.
-2. **Reload any open X / Reddit / Instagram / LinkedIn / YouTube tabs** — tabs opened before the reload keep
+2. **Reload any open X / Reddit / Instagram / LinkedIn / YouTube / Substack tabs** — tabs opened before the reload keep
    running the old code.
 3. **Reload any open Bookmark Captain tabs** (localhost:3000) — until you do, Settings says the
    extension "isn't installed".
@@ -335,7 +343,7 @@ when you reload the extension.
 | **Summarising…** for a long time                                                  | Check the API log for "Enrichment paused" and its `reason`: a rate limit just waits (on Groq's free tier, sometimes until the next day); "was rejected" means a wrong key |
 | A card has no summary, but others do                                              | The AI gave up on it after a few tries (or declined it); it is retried if its text changes                                                                                |
 
-**When a site stops working.** X, Reddit, Instagram, LinkedIn and YouTube change their websites from time
+**When a site stops working.** X, Reddit, Instagram, LinkedIn, YouTube and Substack change their websites from time
 to time. If imports or live saves stop working for one site, the connector for that site
 needs an update. Useful things to collect: a screenshot of the Settings → Platforms row, any
 error on `chrome://extensions` → Bookmark Captain → **Errors**, and what you clicked.
@@ -359,7 +367,8 @@ error on `chrome://extensions` → Bookmark Captain → **Errors**, and what you
 - **Saved dates.** X, Instagram, LinkedIn and YouTube don't say _when_ you saved something.
   For X and Instagram the first import uses each post's publish date (YouTube: the playlist
   order); LinkedIn's uses the time of the import, keeping the saved list's order. Later saves get
-  the time they were noticed.
+  the time they were noticed. **Substack** does say, so its items show the real time you saved
+  them.
 - **Instagram images** come from links that expire after some days, so older items may lose
   their picture. The post and its link stay.
 - **YouTube Watch later** isn't always newest-first, so each check reads the whole list. That
@@ -371,6 +380,12 @@ error on `chrome://extensions` → Bookmark Captain → **Errors**, and what you
 - **LinkedIn** works like YouTube here: each check reads your whole saved list, so a post you
   unsave on your phone leaves the inbox at the next check. Unsaving in Chrome removes it within
   a few seconds (the extension re-reads your saved list right after you click **Unsave**).
+- **Substack** works the same way: each check reads your whole saved list (articles, then
+  notes), so anything you unsave in the Substack app leaves the inbox at the next check.
+  Saves on **substack.com** arrive within seconds. On a newsletter's own `….substack.com` site
+  the extension re-reads your list in a background tab, so they take about a minute.
+  Newsletters with their own web address (not ending in `substack.com`) aren't watched: saves
+  there arrive at the next check.
 
 ---
 
