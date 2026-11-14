@@ -43,6 +43,15 @@ describe('platform ids', () => {
     expect(platformSchema.safeParse('not a site').success).toBe(false);
   });
 
+  it("turns a known platform's own domain into that platform", () => {
+    expect(platformSchema.parse('substack.com')).toBe('substack');
+    expect(platformSchema.parse('hnasr.substack.com')).toBe('substack');
+    expect(platformSchema.parse('x.com')).toBe('x');
+    expect(platformSchema.parse('substack')).toBe('substack');
+    // Other sites keep their exact id, prefix and all.
+    expect(platformSchema.parse('www.pinterest.com')).toBe('www.pinterest.com');
+  });
+
   it('labels known platforms by name and other sites by domain', () => {
     expect(platformLabel('linkedin')).toBe('LinkedIn');
     expect(platformLabel('pinterest.com')).toBe('pinterest.com');

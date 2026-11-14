@@ -1,3 +1,4 @@
+import { isLocalApi } from '../src/local-build';
 import { ADAPTER_HOST_PERMISSIONS } from '../src/platforms/registry';
 
 export const ICON_SIZES = [16, 32, 48, 128] as const;
@@ -26,12 +27,16 @@ export function buildManifest({
 }) {
   const icons = Object.fromEntries(ICON_SIZES.map((size) => [size, `icons/icon-${size}.png`]));
   const web = matchOrigin(webUrl);
+  const local = isLocalApi(apiUrl);
+  const name = local ? 'Bookmark Captain – LOCAL (localhost)' : 'Bookmark Captain';
 
   return {
     manifest_version: 3,
-    name: 'Bookmark Captain',
+    name,
     version,
-    description: 'Sync your browser bookmarks and saved posts into your Bookmark Captain inbox.',
+    description: local
+      ? `Local development build: syncs to ${apiUrl}, not the deployed app.`
+      : 'Sync your browser bookmarks and saved posts into your Bookmark Captain inbox.',
     minimum_chrome_version: '116',
     // Least privilege: bookmarks to read, storage for the queue, alarms for retries and
     // catch-ups, scripting to add a platform's content scripts only once it is connected,
@@ -45,7 +50,7 @@ export function buildManifest({
     // Any other site is asked for one at a time, when you click "Sync this list" on it.
     optional_host_permissions: ['https://*/*'],
     background: { service_worker: 'background.js', type: 'module' },
-    action: { default_title: 'Bookmark Captain', default_popup: 'popup.html', default_icon: icons },
+    action: { default_title: name, default_popup: 'popup.html', default_icon: icons },
     icons,
     content_scripts: [
       {

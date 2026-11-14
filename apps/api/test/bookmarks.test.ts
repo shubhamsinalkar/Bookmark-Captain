@@ -102,6 +102,20 @@ describe('POST /bookmarks/ingest', () => {
     expect((await list(agent, { platform: 'pinterest.com' })).items).toHaveLength(2);
   });
 
+  it("files a known platform's own domain under that platform", async () => {
+    const { agent } = await signIn(app);
+    // What an extension that taught substack.com with "Sync this list" still sends.
+    const result = await ingest(agent, [
+      { platform: 'substack.com', externalId: 'c-1', url: 'https://substack.com/@a/note/c-1' },
+      { platform: 'substack', externalId: 'c-1', url: 'https://substack.com/@a/note/c-1' },
+    ]);
+    expect(result).toMatchObject({ created: 1, updated: 0 });
+
+    const { body } = await agent.get('/bookmarks/sources').expect(200);
+    expect(body).toEqual({ sources: [{ platform: 'substack', count: 1 }] });
+    expect((await list(agent, { platform: 'substack.com' })).items).toHaveLength(1);
+  });
+
   it('is idempotent and skips unchanged rows', async () => {
     const { agent } = await signIn(app);
     const items: IngestItem[] = [{ platform: 'browser', url: 'https://example.com/a', title: 'A' }];

@@ -36,6 +36,13 @@
       "when": 1794374174241,
       "tag": "0004_user_passwords",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794595315180,
+      "tag": "0005_substack_domain_to_platform",
+      "breakpoints": true
     }
   ]
 }

@@ -93,7 +93,11 @@ The extension isn't on the Chrome Web Store yet, so it's installed by hand ("Loa
      from the [latest release](https://github.com/shubhamsinalkar/Bookmark-Captain/releases/latest)
      and unzip it into a folder you'll keep. Chrome runs the extension from that folder: if
      you delete or move it, the extension stops working.
-   - **Running it yourself:** use the folder `apps/extension/dist` inside the project.
+   - **Running it yourself:** use the folder `apps/extension/dist` inside the project. This
+     build talks to your own computer (`localhost`), so it's marked as local: it's called
+     **Bookmark Captain – LOCAL (localhost)**, has an **orange** icon and a **Local** badge in its popup.
+     The released extension has a dark icon and no badge, so you can keep both installed
+     and tell them apart.
 2. Open `chrome://extensions` in Chrome.
 3. Turn on **Developer mode** (top right).
 4. Click **Load unpacked** and choose the folder from step 1 (the one containing

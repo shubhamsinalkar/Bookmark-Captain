@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { ADAPTERS } from '../src/platforms/registry';
 import { SITE_SCRIPTS } from '../src/platforms/sites/constants';
 import { renderIcon } from './icons';
+import { isLocalApi } from '../src/local-build';
 import { buildManifest, ICON_SIZES } from './manifest';
 
 const root = path.resolve(import.meta.dirname, '..');
@@ -79,7 +80,10 @@ async function writeStaticFiles() {
   await copyFile(path.join(src, 'popup/popup.css'), path.join(outdir, 'popup.css'));
   await Promise.all(
     ICON_SIZES.map((size) =>
-      writeFile(path.join(outdir, `icons/icon-${size}.png`), renderIcon(size)),
+      writeFile(
+        path.join(outdir, `icons/icon-${size}.png`),
+        renderIcon(size, { local: isLocalApi(config.apiUrl) }),
+      ),
     ),
   );
 }

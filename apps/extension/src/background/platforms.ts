@@ -73,11 +73,16 @@ function siteConnector(site: LearnedSite): PlatformAdapter {
   };
 }
 
-/** Sites taught with "Sync this list", except any that now have a built-in connector. */
+/**
+ * Sites taught with "Sync this list", except any that now have a built-in connector. A site
+ * taught before its connector existed is stored under its domain ("substack.com", not
+ * "substack"), so it's matched by domain; `restorePlatforms` then forgets it.
+ */
 const learnedSites = (state: ExtensionState): LearnedSite[] =>
   Object.values(state.sites).filter(
     (site): site is LearnedSite =>
-      site !== undefined && !ADAPTERS.some((adapter) => adapter.platform === site.platform),
+      site !== undefined &&
+      !ADAPTERS.some((adapter) => adapter.platform === platformForHost(site.platform)),
   );
 
 /** Every connector: built in, then learned. */
