@@ -76,7 +76,8 @@ locally.
 
 1. `pnpm --filter @bc/extension build` (or keep `pnpm dev` running).
 2. Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked** and choose
-   `apps/extension/dist`.
+   `apps/extension/dist`. A build pointed at `localhost` shows up as **Bookmark Captain –
+   LOCAL (localhost)** with an orange icon, so it can sit next to the released extension.
 3. Click the extension icon → **Connect account**, then **Connect extension** on the page that
    opens. Your bookmarks are imported and stay in sync from then on.
 

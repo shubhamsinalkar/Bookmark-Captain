@@ -5,7 +5,7 @@ import {
   platformForHost,
 } from '@bc/shared/constants';
 import { PLATFORM_LOGOS } from '@bc/shared/logos';
-import { CONNECT_PAGE_URL, WEB_URL } from '../config';
+import { API_URL, CONNECT_PAGE_URL, IS_LOCAL_BUILD, WEB_URL } from '../config';
 import { type RuntimeRequest, sendToBackground, type SyncStatus } from '../messages';
 
 const app = document.getElementById('app')!;
@@ -13,6 +13,13 @@ const topActions = document.getElementById('top-actions')!;
 const numberFormat = new Intl.NumberFormat('en');
 const relativeTime = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
 const SVG_NS = 'http://www.w3.org/2000/svg';
+
+// A local build says so, so it isn't confused with the released extension.
+if (IS_LOCAL_BUILD) {
+  const badge = document.getElementById('build-badge')!;
+  badge.hidden = false;
+  badge.title = `Local development build: syncs to ${API_URL}`;
+}
 
 function timeAgo(iso: string): string {
   const minutes = Math.round((Date.parse(iso) - Date.now()) / 60_000);

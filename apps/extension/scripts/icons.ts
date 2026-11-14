@@ -1,10 +1,15 @@
 import { crc32, deflateSync } from 'node:zlib';
 
+/** Square colours: dark zinc for the released extension, orange for local builds. */
+const RELEASE_COLOUR = [0x18, 0x18, 0x1b] as const;
+const LOCAL_COLOUR = [0xea, 0x58, 0x0c] as const;
+
 /**
- * Renders the extension icon (a white bookmark ribbon on a dark rounded square) as a PNG,
- * so the repo needs no binary assets. 4×4 supersampling gives smooth edges.
+ * Renders the extension icon (a white bookmark ribbon on a rounded square) as a PNG, so the
+ * repo needs no binary assets. 4×4 supersampling gives smooth edges.
  */
-export function renderIcon(size: number): Buffer {
+export function renderIcon(size: number, { local = false }: { local?: boolean } = {}): Buffer {
+  const [r, g, b] = local ? LOCAL_COLOUR : RELEASE_COLOUR;
   const SAMPLES = 4;
   const rgba = Buffer.alloc(size * size * 4);
 
@@ -22,11 +27,11 @@ export function renderIcon(size: number): Buffer {
       }
       const total = SAMPLES * SAMPLES;
       const ribbonShare = ribbon / total;
-      // Dark zinc square (#18181b) with the white ribbon blended on top.
+      // Coloured square with the white ribbon blended on top.
       const offset = (y * size + x) * 4;
-      rgba[offset] = Math.round(0x18 + (0xff - 0x18) * ribbonShare);
-      rgba[offset + 1] = Math.round(0x18 + (0xff - 0x18) * ribbonShare);
-      rgba[offset + 2] = Math.round(0x1b + (0xff - 0x1b) * ribbonShare);
+      rgba[offset] = Math.round(r + (0xff - r) * ribbonShare);
+      rgba[offset + 1] = Math.round(g + (0xff - g) * ribbonShare);
+      rgba[offset + 2] = Math.round(b + (0xff - b) * ribbonShare);
       rgba[offset + 3] = Math.round((255 * background) / total);
     }
   }
