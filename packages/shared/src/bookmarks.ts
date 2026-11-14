@@ -1,13 +1,21 @@
 import { z } from 'zod';
 import { MAX_INGEST_BATCH } from './constants';
-import { isPlatformId, type Platform } from './platforms';
+import { isKnownPlatform, isPlatformId, platformForHost, type Platform } from './platforms';
 
-/** A known platform id ("x") or the domain of any other site ("pinterest.com"). */
+/**
+ * A known platform id ("x") or the domain of any other site ("pinterest.com"). A known
+ * platform's own domain becomes that platform: an extension from before Substack had a
+ * connector taught substack.com as a plain site and still sends "substack.com".
+ */
 export const platformSchema = z
   .string()
   .trim()
   .toLowerCase()
-  .refine(isPlatformId, { message: 'Expected a known platform or a domain' });
+  .refine(isPlatformId, { message: 'Expected a known platform or a domain' })
+  .transform((value): Platform => {
+    const known = platformForHost(value);
+    return isKnownPlatform(known) ? known : value;
+  });
 
 export const BOOKMARK_STATUSES = ['unread', 'opened', 'done', 'archived'] as const;
 export const bookmarkStatusSchema = z.enum(BOOKMARK_STATUSES);
