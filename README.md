@@ -123,10 +123,11 @@ Errors always have the shape `{ "error": { "code", "message", "details?" } }`.
 
 ## Using Neon
 
-1. Create a project at https://console.neon.tech, then create `dev` and `test` branches
-   from `production` (or `neonctl branches create --name dev`).
-2. For the `dev` branch, copy the **pooled** connection string into `DATABASE_URL` and the
+1. Create a project at https://console.neon.tech, then create `local` and `test` branches
+   from `production` (or `neonctl branches create --name local`). Set them to never expire.
+2. For the `local` branch, copy the **pooled** connection string into `DATABASE_URL` and the
    **direct** one into `DATABASE_URL_UNPOOLED`. Migrations use the direct connection.
+   Never put the `production` branch's URL in `.env`: it belongs only to the deployed API.
 3. Copy the `test` branch's direct connection string into `TEST_DATABASE_URL`.
 4. Use `sslmode=verify-full` in every URL.
 5. `pnpm db:migrate`
