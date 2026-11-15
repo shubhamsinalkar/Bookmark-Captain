@@ -17,7 +17,7 @@ pnpm lint | typecheck | format | format:check | build
 pnpm db:generate         # after editing packages/db/src/schema.ts — commit the SQL it creates
 pnpm db:migrate          # applies migrations to DATABASE_URL_UNPOOLED ?? DATABASE_URL
 pnpm --filter @bc/extension build   # → apps/extension/dist (load unpacked in chrome://extensions)
-pnpm --filter @bc/api ai status | search "<query>"   # AI progress / try search by meaning (dev DB, read-only)
+pnpm --filter @bc/api ai status | search "<query>"   # AI progress / try search by meaning (database in .env, read-only)
 ```
 
 Single tests:
@@ -33,7 +33,7 @@ CI (`.github/workflows/ci.yml`) runs format → lint → typecheck → **schema/
 ## Environment and databases
 
 - One root `.env` (see `.env.example`) is loaded by every package in its own way: API dev via `tsx --env-file-if-exists`, web via `loadEnvConfig(..., forceReload=true)` in `next.config.ts` (without `forceReload` Next's cache ignores it), vitest/e2e/extension build via `process.loadEnvFile`.
-- Postgres is **Neon** (project "Bookmark Captain"): branch `production` (default) is used **only** by the deployed API on Render — never put its URL in the local `.env`. Branch `local` (a child of `production`; "Reset from parent" refreshes it with live data) → `DATABASE_URL` (pooled) + `DATABASE_URL_UNPOOLED` (direct, for migrations); branch `test` → `TEST_DATABASE_URL`, which the API tests and e2e suite **truncate**. Test harnesses refuse to run if it equals the dev URL. (Until 2026-11-14 the laptop and Render shared one branch, then named `dev`.) Use `sslmode=verify-full`. Docker (`pnpm db:up`) is only an offline fallback.
+- Postgres is **Neon** (project "Bookmark Captain"): branch `production` (default) is used **only** by the deployed API on Render — never put its URL in the local `.env`. Branch `local` (a child of `production`; "Reset from parent" refreshes it with live data) → `DATABASE_URL` (pooled) + `DATABASE_URL_UNPOOLED` (direct, for migrations); branch `test` → `TEST_DATABASE_URL`, which the API tests and e2e suite **truncate**. Test harnesses refuse to run if it equals `DATABASE_URL` or `DATABASE_URL_UNPOOLED`. Use `sslmode=verify-full`. Docker (`pnpm db:up`) is only an offline fallback.
 - Turborepo runs in strict env mode: a new env var needed by `build`/`test` tasks must be declared in `turbo.json`. Before changing Turborepo config, read the docs bundled in the installed `turbo` package (see `AGENTS.md`).
 
 ## Architecture
